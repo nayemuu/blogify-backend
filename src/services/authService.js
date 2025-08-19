@@ -1,6 +1,5 @@
 import validator from "validator";
 import { AppError } from "../utils/appError.js";
-import { catchAsync } from "../utils/catchAsync.js";
 import { replaceMongoIdInObject } from "../utils/mongoDB-Utils.js";
 import User from "../models/userModel.js";
 
@@ -61,9 +60,47 @@ export const createUser = async (userData) => {
     password,
   });
 
-  const newObj = newUser._doc;
-  delete newObj.password;
+  console.log("newUser = ", newUser);
 
-  // console.log("newObj = ", newObj);
-  return replaceMongoIdInObject(newObj);
+  // Convert the Mongoose document into a plain JavaScript object
+  const sanitizedUser = newUser.toObject();
+
+  /**
+   * @function toObject
+   * @description Converts a Mongoose document into a plain JavaScript object.
+   *
+   * @why
+   * Mongoose documents (e.g., `newUser`) are not plain objects — they are instances of
+   * Mongoose's internal `Document` class and include:
+   * - Built-in instance methods (`save()`, `populate()`, etc.)
+   * - Virtual properties and getters/setters
+   * - Internal metadata and symbols (e.g., `$__`, `_doc`)
+   *
+   * @benefits
+   * Calling `.toObject()`:
+   * - ✅ Converts the document to a plain JavaScript object
+   * - ✅ Removes Mongoose-specific internals
+   * - ✅ Allows safe manipulation (e.g., deleting sensitive fields like `password`)
+   * - ✅ Prepares data for serialization or sending in API responses
+   *
+   * @usecase
+   * Use `.toObject()` when you need to:
+   * - Sanitize a user object before returning it to the frontend
+   * - Clone a document without including internal methods or metadata
+   * - Work with libraries expecting plain objects (e.g., `lodash`, `JSON.stringify`)
+   *
+   * @example
+   * const userDoc = await User.findById(id);
+   * const userObj = userDoc.toObject();
+   * delete userObj.password;
+   * return res.json(userObj);
+   */
+
+  delete sanitizedUser.password;
+  delete sanitizedUser.isSuperUser;
+  delete sanitizedUser._id;
+  delete sanitizedUser.__v;
+
+  // return replaceMongoIdInObject(sanitizedUser);
+  return sanitizedUser;
 };

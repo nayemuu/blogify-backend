@@ -47,33 +47,60 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-// 🔸 When is userSchema.pre("save") called?
-// The `userSchema.pre("save", async function(next) { ... })` middleware
-// is automatically called by Mongoose *before* a document is saved to the database.
-
-// ✅ This runs when:
-// - A new document is created and saved using `.save()` or `Model.create()`
-// - An existing document is modified and `.save()` is called again
-
-// ❌ This will NOT run when using methods like:
-// - `User.updateOne()`, `User.updateMany()`
-// - `User.findByIdAndUpdate()`, `User.findOneAndUpdate()`
-// Those methods skip Mongoose's `.save()` and won't trigger pre-save middleware.
-
-// Example:
-// const user = new User({ name: "Alice", email: "alice@example.com", password: "secret123" });
-// await user.save(); // <-- pre("save") middleware runs here
+/**
+ * @middleware Mongoose Pre-Save Hook
+ * @description
+ * This `pre("save")` middleware is triggered by Mongoose *before* a user document is saved to the database.
+ * It is primarily used to hash the password before storage.
+ *
+ * @triggers
+ * ✅ Runs automatically when:
+ * - A new document is created and saved using `.save()` or `Model.create()`
+ * - An existing document is modified and saved using `.save()`
+ *
+ * ❌ Does NOT run when using update queries like:
+ * - `User.updateOne()`
+ * - `User.updateMany()`
+ * - `User.findOneAndUpdate()` or `findByIdAndUpdate()`
+ * These methods bypass middleware and do not call `.save()`.
+ *
+ *
+ * @async_behavior
+ * This middleware is declared as an `async` function. In **Mongoose**, async middleware
+ * resolves automatically — Mongoose waits for the promise to resolve or reject.
+ *
+ * 🔸 Important Note:
+ * - In **Mongoose**, you do NOT need to call `next()` manually inside `async` middleware.
+ *   - Mongoose will proceed after the async function resolves.
+ * - In contrast, **middleware in other frameworks (e.g., Express)** still requires calling `next()`
+ *   to move to the next middleware.
+ * - ✅ Best Practice: In Mongoose, avoid mixing `async` and `next()` unless you are:
+ *   - Doing manual error handling
+ *   - Needing clarity or consistency in larger codebases
+ *
+ * @example
+ * const user = new User({ name: "Alice", email: "alice@example.com", password: "secret123" });
+ * await user.save(); // --> pre("save") middleware runs here to hash password
+ */
 
 userSchema.pre("save", async function (next) {
-  // 🔍 Only hash the password if it has been modified or is new
+  /**
+   * Only hash the password if it has been modified (or is new).
+   * Prevents unnecessary re-hashing during updates that don’t touch the password field.
+   */
   if (!this.isModified("password")) {
     return next();
     //if we don't called next() method, then next middleware won't run
     //request will stuck after uploading this data on MongoDB
   }
 
-  // 🔐 Hash the password with a salt round of 10
+  /**
+   * 🔐Hash the password with bcrypt using a salt round of 10.
+   * This ensures secure storage of user passwords in the database.
+   */
   this.password = await bcrypt.hash(this.password, 10);
+
+  // Continue to the next middleware
   next();
 });
 
@@ -84,3 +111,5 @@ userSchema.pre("save", async function (next) {
 export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
 
 export default User;
+
+// above comments style is - JSDoc-formatted comments
