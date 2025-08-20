@@ -1,4 +1,5 @@
 import validator from "validator";
+import bcrypt from "bcrypt";
 import { AppError } from "../utils/appError.js";
 import { replaceMongoIdInObject } from "../utils/mongoDB-Utils.js";
 import User from "../models/userModel.js";
@@ -103,10 +104,31 @@ export const createUser = async (userData) => {
   return replaceMongoIdInObject(sanitizedUser);
 };
 
-export const loginUser = async (email, password) => {
+export const authenticateUser = async (email, password) => {
   const user = await User.findOne({ email }).lean();
+  /**
+   * @whyUseLean
+   * `.lean()` is used to return a plain JavaScript object instead of a full Mongoose document.
+   *
+   * @why
+   * - You only need to read the data (e.g., for login)
+   * - You don’t need Mongoose document features like `.save()` or `.populate()`
+   * - It improves performance and uses less memory
+   *
+   * @benefits
+   * - ✅ Faster and Better performance
+   * - ✅ Lighter data (no extra Mongoose stuff)
+   * - ✅ Easier to clean up/ sanitize (e.g., remove password before sending)
+   *
+   * @limitations
+   * - ❌ You cannot call `.save()` or other Mongoose instance methods on the result
+   * - ❌ You can't use Mongoose virtuals, getters, or setters
+   * - ✅ You can still modify the object in memory, but changes won't be saved to the database
+   *
+   * @note
+   * Use `.lean()` when you're only reading data and don’t need to update or save the result.
+   */
 
-  //check if user exist
   if (!user) {
     throw new AppError("Invalid credentials.", 400);
   }
@@ -116,8 +138,9 @@ export const loginUser = async (email, password) => {
 
   if (!passwordMatches) throw new AppError("Invalid credentials.", 400);
 
-  const newObj = { ...user };
-  delete newObj.password;
+  delete user.password;
+  delete user.isSuperUser;
+  delete user.__v;
 
-  return replaceMongoIdInObject(newObj);
+  return replaceMongoIdInObject(user);
 };

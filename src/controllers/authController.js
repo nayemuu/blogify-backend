@@ -1,4 +1,4 @@
-import { createUser } from "../services/authService.js";
+import { createUser, authenticateUser } from "../services/authService.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { getNewTokens } from "../utils/getNewTokens.js";
 
@@ -29,17 +29,15 @@ export const login = catchAsync(async (req, res, next) => {
     throw new AppError("Please provide email and password.", 400);
   }
 
-  const newUser = await createUser({
-    email,
-    password,
-  });
+  const user = await authenticateUser(email, password);
+  console.log("user ", user);
 
-  const { accessToken, refreshToken } = getNewTokens(newUser);
+  const { accessToken, refreshToken } = getNewTokens(user);
 
-  res.status(201).json({
+  res.status(200).json({
     status: "success",
     data: {
-      user: newUser,
+      user: user,
       tokens: { access: accessToken, refresh: refreshToken },
     },
   });
