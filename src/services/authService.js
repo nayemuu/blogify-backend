@@ -60,7 +60,7 @@ export const createUser = async (userData) => {
     password,
   });
 
-  console.log("newUser = ", newUser);
+  // console.log("newUser = ", newUser);
 
   // Convert the Mongoose document into a plain JavaScript object
   const sanitizedUser = newUser.toObject();
@@ -101,4 +101,23 @@ export const createUser = async (userData) => {
   delete sanitizedUser.__v;
 
   return replaceMongoIdInObject(sanitizedUser);
+};
+
+export const loginUser = async (email, password) => {
+  const user = await User.findOne({ email }).lean();
+
+  //check if user exist
+  if (!user) {
+    throw new AppError("Invalid credentials.", 400);
+  }
+
+  //compare passwords
+  let passwordMatches = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatches) throw new AppError("Invalid credentials.", 400);
+
+  const newObj = { ...user };
+  delete newObj.password;
+
+  return replaceMongoIdInObject(newObj);
 };

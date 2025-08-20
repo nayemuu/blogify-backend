@@ -2,27 +2,6 @@ import { createUser } from "../services/authService.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { getNewTokens } from "../utils/getNewTokens.js";
 
-export const register2 = async (req, res, next) => {
-  try {
-    const { name, email, picture, password } = req.body || {};
-    const newUser = await createUser({
-      name,
-      email,
-      picture,
-      password,
-    });
-
-    res.status(201).json({
-      status: "success",
-      data: {
-        user: newUser,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, picture, password } = req.body || {};
   const newUser = await createUser({
@@ -38,7 +17,30 @@ export const register = catchAsync(async (req, res, next) => {
     status: "success",
     data: {
       user: newUser,
-      tokens: { accessToken, refreshToken },
+      tokens: { access: accessToken, refresh: refreshToken },
+    },
+  });
+});
+
+export const login = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    throw new AppError("Please provide email and password.", 400);
+  }
+
+  const newUser = await createUser({
+    email,
+    password,
+  });
+
+  const { accessToken, refreshToken } = getNewTokens(newUser);
+
+  res.status(201).json({
+    status: "success",
+    data: {
+      user: newUser,
+      tokens: { access: accessToken, refresh: refreshToken },
     },
   });
 });
