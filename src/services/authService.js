@@ -98,9 +98,7 @@ export const createUser = async (userData) => {
 
   delete sanitizedUser.password;
   delete sanitizedUser.isSuperUser;
-  delete sanitizedUser._id;
   delete sanitizedUser.__v;
 
-  // return replaceMongoIdInObject(sanitizedUser);
-  return sanitizedUser;
+  return replaceMongoIdInObject(sanitizedUser);
 };

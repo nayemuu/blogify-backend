@@ -1,5 +1,6 @@
 import { createUser } from "../services/authService.js";
 import { catchAsync } from "../utils/catchAsync.js";
+import { getNewTokens } from "../utils/getNewTokens.js";
 
 export const register2 = async (req, res, next) => {
   try {
@@ -31,10 +32,13 @@ export const register = catchAsync(async (req, res, next) => {
     password,
   });
 
+  const { accessToken, refreshToken } = getNewTokens(newUser);
+
   res.status(201).json({
     status: "success",
     data: {
       user: newUser,
+      tokens: { accessToken, refreshToken },
     },
   });
 });
