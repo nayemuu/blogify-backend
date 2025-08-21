@@ -99,7 +99,6 @@ export const createUser = async (userData) => {
 
   delete sanitizedUser.password;
   delete sanitizedUser.isSuperUser;
-  delete sanitizedUser._id;
   delete sanitizedUser.__v;
 
   // return replaceMongoIdInObject(sanitizedUser);
@@ -107,39 +106,45 @@ export const createUser = async (userData) => {
 };
 
 export const authenticateUser = async (email, password) => {
-  const user = await User.findOne({ email }).lean();
-  /**
-   * @whyUseLean
-   * `.lean()` is used to return a plain JavaScript object instead of a full Mongoose document.
-   *
-   * @why
-   * - You only need to read the data (e.g., for login)
-   * - You don’t need Mongoose document features like `.save()` or `.populate()`
-   * - It improves performance and uses less memory
-   *
-   * @benefits
-   * - ✅ Faster and Better performance
-   * - ✅ Lighter data (no extra Mongoose stuff)
-   * - ✅ Easier to clean up/ sanitize (e.g., remove password before sending)
-   *
-   * @limitations
-   * - ❌ You cannot call `.save()` or other Mongoose instance methods on the result
-   * - ❌ You can't use Mongoose virtuals, getters, or setters
-   * - ✅ You can still modify the object in memory, but changes won't be saved to the database
-   *
-   * @note
-   * Use `.lean()` when you're only reading data and don’t need to update or save the result.
-   */
+  const user = await User.findOne({ email }).select("+password name email");
 
   if (!user) {
     throw new AppError("Invalid credentials.", 400);
   }
 
-  //compare passwords
-  let passwordMatches = await bcrypt.compare(password, user.password);
+  const passwordMatches = await user.isPasswordValid(password, user.password);
+  if (!passwordMatches) {
+    throw new AppError("Invalid credentials.", 400);
+  }
 
-  if (!passwordMatches) throw new AppError("Invalid credentials.", 400);
+  // Convert Mongoose document to plain object
+  const sanitizedUser = user.toObject(); // or user.toJSON()
 
-  // return replaceMongoIdInObject({ name: user.name, email:user.email});
-  return { name: user.name, email: user.email };
+  // Remove sensitive data
+  delete sanitizedUser.password;
+
+  return sanitizedUser;
 };
+
+/**
+ * @whyUseLean
+ * `.lean()` is used to return a plain JavaScript object instead of a full Mongoose document.
+ *
+ * @why
+ * - You only need to read the data (e.g., for login)
+ * - You don’t need Mongoose document features like `.save()` or `.populate()`
+ * - It improves performance and uses less memory
+ *
+ * @benefits
+ * - ✅ Faster and Better performance
+ * - ✅ Lighter data (no extra Mongoose stuff)
+ * - ✅ Easier to clean up/ sanitize (e.g., remove password before sending)
+ *
+ * @limitations
+ * - ❌ You cannot call `.save()` or other Mongoose instance methods on the result
+ * - ❌ You can't use Mongoose virtuals, getters, or setters
+ * - ✅ You can still modify the object in memory, but changes won't be saved to the database
+ *
+ * @note
+ * Use `.lean()` when you're only reading data and don’t need to update or save the result.
+ */

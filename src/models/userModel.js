@@ -37,6 +37,7 @@ const userSchema = new Schema(
         128,
         "Plase make sure your password is less than 128 characters long",
       ],
+      select: false,
     },
 
     isSuperUser: {
@@ -104,10 +105,29 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+/**
+ * Compares a plain text password with a hashed password to check for a match.
+ *
+ * @param {string} plainPassword - The password input provided by the user (e.g., from login form).
+ * @param {string} hashedPassword - The password stored in the database.
+ * @returns {Promise<boolean>} - Returns true if passwords match, otherwise false.
+ *
+ * ⚠️ Do NOT use arrow functions for Mongoose instance methods.
+ * Arrow functions do not have their own `this` context, so `this` won't refer to the document instance.
+ * Using a regular function ensures that `this` refers to the Mongoose document.
+ */
+userSchema.methods.isPasswordValid = async function (
+  plainPassword,
+  hashedPassword
+) {
+  return await bcrypt.compare(plainPassword, hashedPassword);
+};
+
 /*
  * If a User model already exists (due to hot reloading in dev), use it.
  * Otherwise, create a new model.
  */
+
 export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
 
 export default User;
