@@ -99,9 +99,11 @@ export const createUser = async (userData) => {
 
   delete sanitizedUser.password;
   delete sanitizedUser.isSuperUser;
+  delete sanitizedUser._id;
   delete sanitizedUser.__v;
 
-  return replaceMongoIdInObject(sanitizedUser);
+  // return replaceMongoIdInObject(sanitizedUser);
+  return sanitizedUser;
 };
 
 export const authenticateUser = async (email, password) => {
@@ -138,9 +140,6 @@ export const authenticateUser = async (email, password) => {
 
   if (!passwordMatches) throw new AppError("Invalid credentials.", 400);
 
-  delete user.password;
-  delete user.isSuperUser;
-  delete user.__v;
-
-  return replaceMongoIdInObject(user);
+  // return replaceMongoIdInObject({ name: user.name, email:user.email});
+  return { name: user.name, email: user.email };
 };

@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
  */
 export const getNewTokens = (user) => {
   const accessToken = jwt.sign(
-    { id: user.id, email: user.email, type: "access" },
+    { email: user.email, type: "access" },
     process.env.ACCESS_TOKEN_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN,
@@ -16,7 +16,7 @@ export const getNewTokens = (user) => {
   );
 
   const refreshToken = jwt.sign(
-    { id: user.id, email: user.email, type: "refresh" },
+    { email: user.email, type: "refresh" },
     process.env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: process.env.REFRESH_JWT_EXPIRES_IN,

@@ -30,7 +30,6 @@ export const login = catchAsync(async (req, res, next) => {
   }
 
   const user = await authenticateUser(email, password);
-  console.log("user ", user);
 
   const { accessToken, refreshToken } = getNewTokens(user);
 
