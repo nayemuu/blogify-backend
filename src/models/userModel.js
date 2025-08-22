@@ -40,6 +40,8 @@ const userSchema = new Schema(
       select: false,
     },
 
+    passwordChangedAt: Date,
+
     isSuperUser: {
       type: Boolean,
       default: false,
@@ -121,6 +123,14 @@ userSchema.methods.isPasswordValid = async function (
   hashedPassword
 ) {
   return await bcrypt.compare(plainPassword, hashedPassword);
+};
+
+userSchema.methods.isPasswordChanged = async function (timeStamp) {
+  if (this?.passwordChangedAt) {
+    console.log("passwordChangedAt = ", this.passwordChangedAt);
+    console.log("timeStamp = ", timeStamp);
+  }
+  return false;
 };
 
 /*

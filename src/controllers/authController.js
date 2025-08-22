@@ -1,6 +1,6 @@
 import { createUser, authenticateUser } from "../services/authService.js";
 import { catchAsync } from "../utils/catchAsync.js";
-import { generateToken } from "../utils/generateToken.js";
+import { generateToken } from "../utils/tokenUtils.js";
 
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, picture, password } = req.body || {};

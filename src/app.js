@@ -3,6 +3,7 @@ import cors from "cors";
 import morgan from "morgan";
 import v1Routes from "./routes/v1Routes.js";
 import { AppError } from "./utils/appError.js";
+import { checkAuth } from "./middlewares/checkAuth.js";
 
 //create express app
 const app = express();
@@ -21,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 //cors
 app.use(cors());
 
-app.get("/", (req, res) => {
+app.post("/", checkAuth, (req, res) => {
   res.status(200).json({
     status: "success",
     // data:data//
