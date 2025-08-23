@@ -5,6 +5,8 @@ import { replaceMongoIdInObject } from "../utils/mongoDB-Utils.js";
 import User from "../models/userModel.js";
 import { generateOtp } from "../utils/otpUtils.js";
 import { OTP } from "../models/otpModel.js";
+import { generateToken } from "../utils/tokenUtils.js";
+import jwt from "jsonwebtoken";
 
 export const createUser = async (userData) => {
   const { name, email, picture, password } = userData;
@@ -235,7 +237,8 @@ export const updateUser = async (payload) => {
   return updatedUser;
 };
 
-export const updatePassword = async ({ email, newPassword, otpCode }) => {
+export const updatePassword = async (payload) => {
+  const { email, newPassword, otpCode } = payload || {};
   // 1. Ensure required inputs
   if (!email || !newPassword || !otpCode) {
     throw new AppError("Email, new password, and OTP are required.", 400);
@@ -293,6 +296,56 @@ export const updatePassword = async ({ email, newPassword, otpCode }) => {
 
   // 7. Save user
   await user.save();
+};
+
+/**
+ * Service to verify a refresh token and return a new access token
+ *
+ * @param {string} refreshToken - The refresh token provided by the client
+ * @returns {string} - Newly generated access token
+ */
+export const refreshTokenService = async (refreshToken) => {
+  if (!refreshToken) {
+    throw new AppError("Please provide a refresh token.", 400);
+  }
+
+  let decoded;
+  try {
+    // Verify refresh token
+    decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+  } catch (err) {
+    throw new AppError("Unauthorized - Invalid or expired refresh token", 401);
+  }
+
+  // Step 1 - Find user from decoded token
+  const user = await User.findById(decoded.id).select("email");
+  if (!user) {
+    throw new AppError(
+      "The user belonging to this token no longer exists",
+      401
+    );
+  }
+
+  // Step 2 - Check if user is active (optional, based on your schema)
+  // if (user.status !== "active") {
+  //   throw new AppError("Unauthorized - User account is not active", 403);
+  // }
+
+  // Step 3 - Check if password was changed after refresh token issued
+  if (user.isPasswordChanged(decoded.iat)) {
+    throw new AppError("Password changed recently. Please log in again.", 401);
+  }
+
+  // Step 4 - Generate new access token
+  const accessToken = generateToken(
+    { id: user._id, email: user.email, type: "access" },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    }
+  );
+
+  return accessToken;
 };
 
 /**

@@ -4,6 +4,7 @@ import {
   authenticateUser,
   forgotPasswordService,
   updatePassword,
+  refreshTokenService,
 } from "../services/authService.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
@@ -110,5 +111,16 @@ export const resetPassword = catchAsync(async (req, res, next) => {
     status: "success",
     message:
       "Your password has been reset successfully. Please log in with your new password.",
+  });
+});
+
+export const refreshToken = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body || {};
+
+  const accessToken = await refreshTokenService(refreshToken);
+
+  res.status(200).json({
+    status: "success",
+    accessToken,
   });
 });

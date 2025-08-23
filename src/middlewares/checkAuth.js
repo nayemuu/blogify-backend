@@ -36,7 +36,8 @@ export const checkAuth = catchAsync(async (req, res, next) => {
   }
 
   // Step 3 - Check if user still exists
-  const user = await User.findById(decoded.id);
+  const user = await User.findById(decoded.id).select("_id");
+  // console.log("user = ", user);
   if (!user) {
     throw new AppError(
       "The user belonging to this token no longer exists",
