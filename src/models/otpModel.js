@@ -22,6 +22,12 @@ const otpSchema = new Schema(
       //   enum: ["email_verification", "password_reset", "login"], // optional validation
     },
 
+    issuedAt: {
+      type: Date,
+      required: true,
+      default: Date.now, // explicitly tracks when OTP was sent
+    },
+
     expiresAt: {
       type: Date,
       required: [true, "Expiration time is required"],

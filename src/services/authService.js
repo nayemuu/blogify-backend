@@ -151,6 +151,7 @@ export const forgotPasswordService = async (email) => {
     // update existing OTP
     existingOtp.otpCode = otpCode;
     existingOtp.otpType = "password-reset";
+    existingOtp.issuedAt = new Date(); // refresh issued time
     existingOtp.expiresAt = new Date(Date.now() + 5 * 60 * 1000); // extend by 5 min
     await existingOtp.save();
   } else {
@@ -159,6 +160,7 @@ export const forgotPasswordService = async (email) => {
       user: user._id,
       otpCode,
       otpType: "password-reset",
+      issuedAt: new Date(),
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
   }
