@@ -7,7 +7,7 @@ import { generateOtp } from "../utils/otpUtils.js";
 import { OTP } from "../models/otpModel.js";
 
 export const createUser = async (userData) => {
-  const { name, email, picture, status, password } = userData;
+  const { name, email, picture, password } = userData;
 
   //check if fields are empty
   if (!name || !email || !password) {
@@ -48,11 +48,11 @@ export const createUser = async (userData) => {
   if (
     !validator.isLength(password, {
       min: 6,
-      max: 128,
+      max: 20,
     })
   ) {
     throw new AppError(
-      "Please make sure your password is between 6 and 128 characters.",
+      "Please make sure your password is between 6 and 20 characters.",
       400
     );
   }
@@ -166,6 +166,133 @@ export const forgotPasswordService = async (email) => {
   }
 
   return otpCode;
+};
+
+export const updateUser = async (payload) => {
+  const { email, name, password, picture, status } = payload;
+
+  // 1. Email is required for lookup
+  if (!email) {
+    throw new AppError("Email is required to update user.", 400);
+  }
+
+  // 2. Find existing user by email
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    throw new AppError("User not found with this email.", 404);
+  }
+
+  // 3. Validate and update name
+  if (name) {
+    if (!validator.isLength(name, { min: 2, max: 30 })) {
+      throw new AppError(
+        "Please make sure your name is between 2 and 30 characters.",
+        400
+      );
+    }
+    user.name = name;
+  }
+
+  // 4. Picture update
+  if (picture !== undefined) {
+    user.picture = picture || null;
+  }
+
+  // 5. Status update
+  if (status) {
+    const allowedStatus = ["active", "inactive", "suspended", "deleted"];
+    if (!allowedStatus.includes(status)) {
+      throw new AppError("Invalid status provided.", 400);
+    }
+    user.status = status;
+  }
+
+  // 6. Handle password change
+  if (password) {
+    if (!validator.isLength(password, { min: 6, max: 20 })) {
+      throw new AppError(
+        "Please make sure your password is between 6 and 20 characters.",
+        400
+      );
+    }
+
+    const isSamePassword = await bcrypt.compare(password, user.password);
+    if (!isSamePassword) {
+      user.password = password;
+      user.passwordChangedAt = new Date();
+    }
+  }
+
+  // 7. Save updated user
+  await user.save();
+
+  // 8. Sanitize output
+  const updatedUser = user.toObject();
+  delete updatedUser.password;
+  delete updatedUser.isSuperUser;
+  delete updatedUser.__v;
+
+  return updatedUser;
+};
+
+export const updatePassword = async ({ email, newPassword, otpCode }) => {
+  // 1. Ensure required inputs
+  if (!email || !newPassword || !otpCode) {
+    throw new AppError("Email, new password, and OTP are required.", 400);
+  }
+
+  // 2. Validate password length
+  if (!validator.isLength(newPassword, { min: 6, max: 20 })) {
+    throw new AppError(
+      "Please make sure your password is between 6 and 20 characters.",
+      400
+    );
+  }
+
+  // 3. Find user by email
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    throw new AppError("User not found with this email.", 404);
+  }
+
+  // 4. Verify OTP document
+  const existingOtp = await OTP.findOne({ user: user._id }).sort({
+    createdAt: -1,
+  });
+  if (!existingOtp) {
+    throw new AppError("Invalid or expired OTP.", 400);
+  }
+
+  // ✅ Ensure OTP type matches
+  if (existingOtp.otpType !== "password-reset") {
+    throw new AppError("OTP type mismatch.", 400);
+  }
+
+  // ✅ Ensure OTP code matches
+  if (existingOtp.otpCode !== Number(otpCode)) {
+    throw new AppError("Invalid OTP code.", 400);
+  }
+
+  // ✅ Ensure OTP not expired
+  if (existingOtp.expiresAt < new Date()) {
+    throw new AppError("OTP has expired.", 400);
+  }
+
+  // 5. Ensure new password is not the same as the old one
+  const isSamePassword = await bcrypt.compare(newPassword, user.password);
+  if (isSamePassword) {
+    throw new AppError(
+      "New password cannot be the same as the old password.",
+      400
+    );
+  }
+
+  // 6. Update password and passwordChangedAt
+  user.password = newPassword; // Will be hashed by pre-save hook
+  user.passwordChangedAt = new Date();
+
+  // 7. Save user
+  await user.save();
 };
 
 /**

@@ -42,9 +42,20 @@ const userSchema = new Schema(
 
     passwordChangedAt: Date,
 
-    isSuperUser: {
+    isSuper: {
       type: Boolean,
       default: false,
+    },
+
+    status: {
+      type: String,
+      required: [true, "status is required"],
+      enum: ["active", "inactive", "suspended", "deleted"],
+      // active → User can use everything.
+      // inactive → User cannot log in or access anything.
+      // suspended → User can only see their profile, but cannot post/engage; existing content hidden.
+      // deleted → User is soft-deleted (kept in DB for record/audit, but not visible in app).
+      default: "active",
     },
   },
   { timestamps: true }
@@ -125,11 +136,35 @@ userSchema.methods.isPasswordValid = async function (
   return await bcrypt.compare(plainPassword, hashedPassword);
 };
 
-userSchema.methods.isPasswordChanged = async function (timeStamp) {
+/**
+ * Check if the user's password was changed after a given JWT issued-at (iat) timestamp.
+ *
+ * @function isPasswordChanged
+ * @memberof User
+ * @param {number} jwtIat - The JWT "issued at" timestamp in **seconds** (from decoded token).
+ * @returns {boolean} True if password was changed after the token was issued, false otherwise.
+ *
+ * @example
+ * const isChanged = user.isPasswordChanged(decodedToken.iat);
+ * if (isChanged) {
+ *   throw new AppError("Password changed recently. Please log in again.", 401);
+ * }
+ */
+
+userSchema.methods.isPasswordChanged = function (jwtIat) {
   if (this?.passwordChangedAt) {
-    console.log("passwordChangedAt = ", this.passwordChangedAt);
-    console.log("timeStamp = ", timeStamp);
+    // Convert passwordChangedAt from Date (ms) → seconds
+    const passwordChangedAtInSeconds = Math.floor(
+      this.passwordChangedAt.getTime() / 1000
+    );
+
+    // console.log("passwordChangedAt (sec) =", passwordChangedAtInSeconds);
+    // console.log("jwtIat (sec) =", jwtIat);
+
+    // Compare in seconds
+    return passwordChangedAtInSeconds > jwtIat;
   }
+
   return false;
 };
 

@@ -3,6 +3,7 @@ import {
   createUser,
   authenticateUser,
   forgotPasswordService,
+  updatePassword,
 } from "../services/authService.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
@@ -99,5 +100,15 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "OTP has been sent to your email",
+  });
+});
+
+export const resetPassword = catchAsync(async (req, res, next) => {
+  await updatePassword(req.body);
+
+  res.status(200).json({
+    status: "success",
+    message:
+      "Your password has been reset successfully. Please log in with your new password.",
   });
 });

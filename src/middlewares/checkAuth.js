@@ -51,14 +51,12 @@ export const checkAuth = catchAsync(async (req, res, next) => {
   // }
 
   // Step 5 - Check if password was changed after token issued
-  // if (user.isPasswordChanged(decoded.iat)) {
-  //   throw new AppError(
-  //     "User recently changed password. Please log in again.",
-  //     401
-  //   );
-  // }
+  if (user.isPasswordChanged(decoded.iat)) {
+    throw new AppError("Password changed recently. Please log in again.", 401);
+  }
 
+  // console.log("yoo");
   // Attach user to request object for further middleware
-  req.user = user;
+  // req.user = user;
   next();
 });
