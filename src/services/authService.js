@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import { AppError } from "../utils/appError.js";
 import { replaceMongoIdInObject } from "../utils/mongoDB-Utils.js";
 import User from "../models/userModel.js";
+import { generateOtp } from "../utils/otpUtils.js";
+import { OTP } from "../models/otpModel.js";
 
 export const createUser = async (userData) => {
   const { name, email, picture, status, password } = userData;
@@ -124,6 +126,44 @@ export const authenticateUser = async (email, password) => {
   delete sanitizedUser.password;
 
   return sanitizedUser;
+};
+
+export const forgotPasswordService = async (email) => {
+  if (!email) {
+    throw new AppError("Email address is required", 400);
+  }
+
+  if (!validator.isEmail(email)) {
+    throw new AppError("Invalid email", 400);
+  }
+
+  const user = await User.findOne({ email }).select("_id");
+  if (!user) {
+    throw new AppError("No account found with this email address", 404);
+  }
+
+  const otpCode = generateOtp();
+
+  // check if OTP already exists for this user
+  const existingOtp = await OTP.findOne({ user: user._id });
+
+  if (existingOtp) {
+    // update existing OTP
+    existingOtp.otpCode = otpCode;
+    existingOtp.otpType = "password-reset";
+    existingOtp.expiresAt = new Date(Date.now() + 5 * 60 * 1000); // extend by 5 min
+    await existingOtp.save();
+  } else {
+    // create new OTP
+    await OTP.create({
+      user: user._id,
+      otpCode,
+      otpType: "password-reset",
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+  }
+
+  return otpCode;
 };
 
 /**

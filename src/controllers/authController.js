@@ -1,6 +1,15 @@
-import { createUser, authenticateUser } from "../services/authService.js";
+import validator from "validator";
+import {
+  createUser,
+  authenticateUser,
+  forgotPasswordService,
+} from "../services/authService.js";
+import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { generateToken } from "../utils/tokenUtils.js";
+import User from "../models/userModel.js";
+import { generateOtp } from "../utils/otpUtils.js";
+import { OTP } from "../models/otpModel.js";
 
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, picture, password } = req.body || {};
@@ -71,5 +80,24 @@ export const login = catchAsync(async (req, res, next) => {
       user: { name: user.name },
       tokens: { access, refresh },
     },
+  });
+});
+
+export const forgotPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body || {};
+
+  const otpCode = await forgotPasswordService(email);
+
+  if (process.env.NODE_ENV !== "production") {
+    return res.status(200).json({
+      status: "success",
+      message: "OTP has been sent to your email (development mode)",
+      otpCode, // only expose in dev/test
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "OTP has been sent to your email",
   });
 });
