@@ -58,6 +58,6 @@ export const checkAuth = catchAsync(async (req, res, next) => {
 
   // console.log("yoo");
   // Attach user to request object for further middleware
-  // req.user = user;
+  req.user = { id: user._id };
   next();
 });

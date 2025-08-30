@@ -9,9 +9,6 @@ import {
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { generateToken } from "../utils/tokenUtils.js";
-import User from "../models/userModel.js";
-import { generateOtp } from "../utils/otpUtils.js";
-import { OTP } from "../models/otpModel.js";
 
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, picture, password } = req.body || {};
@@ -23,7 +20,7 @@ export const register = catchAsync(async (req, res, next) => {
   });
 
   const access = generateToken(
-    { id: user._id, email: user.email, type: "access" },
+    { id: user._id, type: "access" },
     process.env.ACCESS_TOKEN_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN,
@@ -31,7 +28,7 @@ export const register = catchAsync(async (req, res, next) => {
   );
 
   const refresh = generateToken(
-    { id: user._id, email: user.email, type: "refresh" },
+    { id: user._id, type: "refresh" },
     process.env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: process.env.REFRESH_JWT_EXPIRES_IN,
@@ -61,7 +58,7 @@ export const login = catchAsync(async (req, res, next) => {
   const user = await authenticateUser(email, password);
 
   const access = generateToken(
-    { id: user._id, email: user.email, type: "access" },
+    { id: user._id, type: "access" },
     process.env.ACCESS_TOKEN_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN,
@@ -69,7 +66,7 @@ export const login = catchAsync(async (req, res, next) => {
   );
 
   const refresh = generateToken(
-    { id: user._id, email: user.email, type: "refresh" },
+    { id: user._id, type: "refresh" },
     process.env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: process.env.REFRESH_JWT_EXPIRES_IN,
@@ -79,7 +76,6 @@ export const login = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: {
-      user: { name: user.name },
       tokens: { access, refresh },
     },
   });
