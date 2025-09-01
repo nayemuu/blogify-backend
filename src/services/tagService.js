@@ -16,7 +16,8 @@ export const createTagService = async (title) => {
 };
 
 export const getAllTagsService = async () => {
-  return await Tag.find().sort({ createdAt: -1 });
+  let tags = await Tag.find().sort({ createdAt: -1 }).lean();
+  return tags;
 };
 
 export const getTagByIdService = async (id) => {
@@ -60,5 +61,28 @@ export const deleteTagService = async (id) => {
 
   const tag = await Tag.findByIdAndDelete(id);
   if (!tag) throw new AppError("Tag not found", 404);
-  return tag;
+  return tag.toObject();
 };
+
+/**
+ * @whyUseLean
+ * `.lean()` is used to return a plain JavaScript object instead of a full Mongoose document.
+ *
+ * @why
+ * - You only need to read the data (e.g., for login)
+ * - You don’t need Mongoose document features like `.save()` or `.populate()`
+ * - It improves performance and uses less memory
+ *
+ * @benefits
+ * - ✅ Faster and Better performance
+ * - ✅ Lighter data (no extra Mongoose stuff)
+ * - ✅ Easier to clean up/ sanitize (e.g., remove password before sending)
+ *
+ * @limitations
+ * - ❌ You cannot call `.save()` or other Mongoose instance methods on the result
+ * - ❌ You can't use Mongoose virtuals, getters, or setters
+ * - ✅ You can still modify the object in memory, but changes won't be saved to the database
+ *
+ * @note
+ * Use `.lean()` when you're only reading data and don’t need to update or save the result.
+ */
