@@ -1,5 +1,7 @@
 import mongoose, { Schema } from "mongoose";
+import validator from "validator";
 import User from "./userModel.js";
+import Tag from "./tagModel.js";
 
 const blogSchema = new Schema(
   {
@@ -12,6 +14,14 @@ const blogSchema = new Schema(
       maxlength: [150, "Title cannot exceed 150 characters"],
     },
 
+    // tags
+    likedBy: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Tag",
+      },
+    ],
+
     // Blog main content/body
     content: {
       type: String,
@@ -23,7 +33,11 @@ const blogSchema = new Schema(
       type: String,
       required: [true, "Thumbnail URL is required"],
       trim: true,
-      match: [/^https?:\/\/.+/, "Please provide a valid URL"],
+      // match: [/^https?:\/\/.+/, "Please provide a valid URL"],
+      validate: {
+        validator: (val) => validator.isURL(val),
+        message: "Thumbnail must be a valid URL",
+      },
     },
 
     // Author reference
