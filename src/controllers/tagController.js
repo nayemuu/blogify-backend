@@ -6,7 +6,7 @@ import {
   updateTagService,
 } from "../services/tagService.js";
 import { catchAsync } from "../utils/catchAsync.js";
-import { replaceMongoIdInArray } from "../utils/mongoDB-utils.js";
+import { sanitizeArray } from "../utils/mongoDB-utils.js";
 
 export const createTag = catchAsync(async (req, res, next) => {
   const { title } = req.body || {};
@@ -25,7 +25,7 @@ export const getAllTags = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     results: tags.length,
-    data: replaceMongoIdInArray(tags),
+    data: sanitizeArray(tags),
   });
 });
 
