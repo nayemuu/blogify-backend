@@ -13,10 +13,17 @@ if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
-//parse json request body
+/**
+ * express.urlencoded() parses data with Content-Type: application/x-www-form-urlencoded.
+ * express.json() parses data with Content-Type: application/json.
+ * Neither can parse Content-Type: multipart/form-data.
+ * Use a middleware like multer or formidable for multipart handling.
+ */
+
+// Parse request bodies with Content-Type: application/json
 app.use(express.json());
 
-//parse form data
+// Parse request bodies with Content-Type: application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
 //cors
