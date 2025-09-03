@@ -4,6 +4,8 @@ import morgan from "morgan";
 import v1Routes from "./routes/v1Routes.js";
 import { AppError } from "./utils/appError.js";
 import { checkAuth } from "./middlewares/checkAuth.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 //create express app
 const app = express();
@@ -26,10 +28,46 @@ app.use(express.json());
 // Parse request bodies with Content-Type: application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
+/**
+ * --------------------------------------------------------------------
+ * Getting __dirname in ES Modules:
+ * --------------------------------------------------------------------
+ * - In CommonJS, Node.js provides __dirname and __filename by default.
+ * - In ES Modules (`"type": "module"` in package.json), they are not defined.
+ * - We can reconstruct them using `import.meta.url`:
+ *    1. `import.meta.url` → gives the current module's file URL.
+ *    2. `fileURLToPath()` → converts the file URL to a normal path.
+ *    3. `path.dirname()` → extracts the directory name.
+ */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/**
+ * --------------------------------------------------------------------
+ * Public folder location (choose one approach):
+ * --------------------------------------------------------------------
+ * 1. Relative to the current module → `${__dirname}/public`
+ *    - Use this if `public` is next to the current file.
+ *
+ * 2. Relative to the project root → `process.cwd()/public`
+ *    - Use this if `public` always lives at the project root,
+ *      regardless of which file sets up Express.
+ */
+const publicPath = path.join(process.cwd(), "public");
+
+/**
+ * --------------------------------------------------------------------
+ * Serve static assets
+ * --------------------------------------------------------------------
+ * Express will serve HTML, CSS, JS, images, etc. from the chosen
+ * "public" folder. Requests to `/` will automatically map to files inside it.
+ */
+app.use(express.static(publicPath));
+
 //cors
 app.use(cors());
 
-app.post("/", checkAuth, (req, res) => {
+app.post("/", (req, res) => {
   res.status(200).json({
     status: "success",
     // data:data//
