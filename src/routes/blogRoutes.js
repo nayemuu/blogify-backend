@@ -6,10 +6,11 @@ import {
   //   getBlogById,
   //   updateBlog,
 } from "../controllers/blogController.js";
+import { upload } from "../utils/multer.js";
 
 const route = express.Router();
 
-route.post("/", trimRequest.all, createBlog);
+route.post("/", trimRequest.all, upload.single("thumbnail"), createBlog);
 // route.get("/", trimRequest.all, getAllBlogs);
 // route.get("/:id", trimRequest.all, getBlogById);
 // route.post("/:id", trimRequest.all, updateBlog);

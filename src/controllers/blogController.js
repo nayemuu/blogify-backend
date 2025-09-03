@@ -53,7 +53,7 @@ export const createBlog = catchAsync(async (req, res, next) => {
     console.log("req.body = ", req.body);
   }
 
-  console.log("req.body = ", req.body);
+  console.log("req.file = ", req.file);
 
   //   if (!req.user?.permissions.includes("can_create_blog")) {
   //     throw new AppError("You do not have permission to create blogs", 403);
