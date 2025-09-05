@@ -46,61 +46,44 @@ import { createBlogService } from "../services/blogService.js";
 
 /**
  * Create new blog
- * - Requires "can_create_blog"
  * - If user has "can_publish_blog", blog will be published
  *   else blog will be pending
  */
 
 export const createBlog = catchAsync(async (req, res, next) => {
-  // if (req?.body) {
-  //   console.log("req.body = ", req.body);
-  // }
+  const { title, content } = req.body;
+  const { file, user } = req;
 
-  // console.log("req.file = ", req.file);
-
-  // ✅ Optional request-level validation before DB call
-  if (
-    !req?.body?.title ||
-    !validator.isLength(req.body.title, { min: 5, max: 150 })
-  ) {
-    throw new AppError("Title must be between 5 and 150 characters", 400);
+  // ✅ Input validation
+  if (!title || !validator.isLength(title, { min: 5, max: 150 })) {
+    throw new AppError("title must be between 5 and 150 characters", 400);
+  }
+  if (!content) {
+    throw new AppError("content is required", 400);
+  }
+  if (!file?.path) {
+    throw new AppError("thumbnail is required", 400);
   }
 
-  if (!req?.body?.content) {
-    throw new AppError("Content is required", 400);
-  }
-
-  if (!req.file?.path) {
-    throw new AppError("Thumbnail is required", 400);
-  }
-
-  // Handle image upload if a file is provided
-  let imageUrl = null;
+  let imageUrl;
 
   try {
-    const image = await uploadImage(req.file.path);
+    // ✅ Upload image
+    const image = await uploadImage(file.path);
     imageUrl = image.secure_url;
-  } catch (uploadError) {
-    throw new Error("Failed to upload image");
-  } finally {
-    // Ensure local file is removed if it exists
-    if (req.file?.path) {
-      removeLocalFile(req.file.path);
-    }
-  }
 
-  try {
+    // ✅ Prepare blog data
     const blogData = {
       ...req.body,
       thumbnail: imageUrl,
-      authorId: req.user.id,
+      authorId: user.id,
       status:
-        req?.user?.isSuper ||
-        req?.user?.permissions?.includes("can_publish_blog")
+        user?.isSuper || user?.permissions?.includes("can_publish_blog")
           ? "published"
           : "pending",
     };
 
+    // ✅ Save blog
     const blog = await createBlogService(blogData);
 
     res.status(201).json({
@@ -108,10 +91,15 @@ export const createBlog = catchAsync(async (req, res, next) => {
       data: blog,
     });
   } catch (error) {
-    console.log("error = ", error);
+    // ✅ Rollback image if DB fails
     if (imageUrl) {
-      deleteImage(imageUrl);
+      await deleteImage(imageUrl);
     }
     throw error;
+  } finally {
+    // ✅ Always clean up local file
+    if (file?.path) {
+      removeLocalFile(file.path);
+    }
   }
 });
