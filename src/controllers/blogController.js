@@ -3,7 +3,10 @@ import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { deleteImage, uploadImage } from "../utils/imageUploadUtils.js";
 import { removeLocalFile } from "../utils/fsUtils.js";
-import { createBlogService } from "../services/blogService.js";
+import {
+  createBlogService,
+  getPublishedBlogsService,
+} from "../services/blogService.js";
 
 /**
  * 🔹 Best Practice: Layered Validation in Node.js + Mongoose
@@ -102,4 +105,23 @@ export const createBlog = catchAsync(async (req, res, next) => {
       removeLocalFile(file.path);
     }
   }
+});
+
+/**
+ * Get all published blogs
+ */
+export const getPublishedBlogs = catchAsync(async (req, res, next) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = parseInt(req.query.offset) || 0;
+
+  const { count, blogs } = await getPublishedBlogsService(limit, offset);
+
+  res.status(200).json({
+    status: "success",
+    count, // total published blogs
+    limit,
+    offset,
+    results: blogs.length,
+    data: blogs,
+  });
 });

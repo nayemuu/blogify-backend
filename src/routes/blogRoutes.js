@@ -2,6 +2,7 @@ import express from "express";
 import trimRequest from "trim-request";
 import {
   createBlog,
+  getPublishedBlogs,
   //   getAllBlogs,
   //   getBlogById,
   //   updateBlog,
@@ -20,7 +21,7 @@ route.post(
   checkPermission("can_create_blog"),
   createBlog
 );
-// route.get("/", trimRequest.all, getAllBlogs);
+route.get("/", trimRequest.all, getPublishedBlogs);
 // route.get("/:id", trimRequest.all, getBlogById);
 // route.post("/:id", trimRequest.all, updateBlog);
 // route.delete("/:id", trimRequest.all, deleteBlog);
