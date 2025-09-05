@@ -3,6 +3,7 @@ import authRoutes from "./authRoutes.js";
 import tagRoutes from "./tagRoutes.js";
 import userRoutes from "./userRoutes.js";
 import blogRoutes from "./blogRoutes.js";
+import { checkAuth } from "../middlewares/checkAuth.js";
 
 const router = express.Router();
 

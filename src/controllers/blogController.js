@@ -1,6 +1,9 @@
 import validator from "validator";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
+import { deleteImage, uploadImage } from "../utils/imageUploadUtils.js";
+import { removeLocalFile } from "../utils/fsUtils.js";
+import { createBlogService } from "../services/blogService.js";
 
 /**
  * 🔹 Best Practice: Layered Validation in Node.js + Mongoose
@@ -49,15 +52,18 @@ import { catchAsync } from "../utils/catchAsync.js";
  */
 
 export const createBlog = catchAsync(async (req, res, next) => {
-  if (req?.body) {
-    console.log("req.body = ", req.body);
-  }
+  // if (req?.body) {
+  //   console.log("req.body = ", req.body);
+  // }
 
-  console.log("req.file = ", req.file);
+  // console.log("req.file = ", req.file);
 
-  //   if (!req.user?.permissions.includes("can_create_blog")) {
-  //     throw new AppError("You do not have permission to create blogs", 403);
-  //   }
+  // if (
+  //   req?.user?.isSuper ||
+  //   !req?.user?.permissions.includes("can_create_blog")
+  // ) {
+  //   throw new AppError("You do not have permission to create blogs", 403);
+  // }
 
   // ✅ Optional request-level validation before DB call
   if (
@@ -71,22 +77,48 @@ export const createBlog = catchAsync(async (req, res, next) => {
     throw new AppError("Content is required", 400);
   }
 
-  if (!req?.body?.thumbnail || !validator.isURL(req.body.thumbnail)) {
-    throw new AppError("Thumbnail must be a valid URL", 400);
+  if (!req.file?.path) {
+    throw new AppError("Thumbnail is required", 400);
   }
 
-  const blogData = {
-    ...req.body,
-    authorId: req.user.id,
-    status: req.user.permissions.includes("can_publish_blog")
-      ? "published"
-      : "pending",
-  };
+  // Handle image upload if a file is provided
+  let imageUrl = null;
 
-  const blog = await blogService.createBlogService(blogData);
+  try {
+    const image = await uploadImage(req.file.path);
+    imageUrl = image.secure_url;
+  } catch (uploadError) {
+    throw new Error("Failed to upload image");
+  } finally {
+    // Ensure local file is removed if it exists
+    if (req.file?.path) {
+      removeLocalFile(req.file.path);
+    }
+  }
 
-  res.status(201).json({
-    status: "success",
-    data: { blog },
-  });
+  try {
+    const blogData = {
+      ...req.body,
+      thumbnail: imageUrl,
+      authorId: req.user.id,
+      status:
+        req?.user?.isSuper ||
+        req?.user?.permissions?.includes("can_publish_blog")
+          ? "published"
+          : "pending",
+    };
+
+    const blog = await createBlogService(blogData);
+
+    res.status(201).json({
+      status: "success",
+      data: blog,
+    });
+  } catch (error) {
+    console.log("error = ", error);
+    if (imageUrl) {
+      deleteImage(imageUrl);
+    }
+    throw error;
+  }
 });

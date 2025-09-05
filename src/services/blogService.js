@@ -1,6 +1,6 @@
 import { Blog } from "../models/blogModel.js";
-import AppError from "../utils/appError.js";
-import { sanitizeObject } from "../utils/sanitize.js";
+import { AppError } from "../utils/appError.js";
+import { sanitizeObject } from "../utils/mongoDB-utils.js";
 
 /**
  * Create a new blog
@@ -13,5 +13,6 @@ export const createBlogService = async (data) => {
   }
 
   const blog = await Blog.create(data);
+
   return sanitizeObject(blog);
 };

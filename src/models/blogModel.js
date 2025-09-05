@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import validator from "validator";
 import User from "./userModel.js";
-import Tag from "./tagModel.js";
+import { Tag } from "./tagModel.js";
 
 const blogSchema = new Schema(
   {
@@ -31,12 +31,12 @@ const blogSchema = new Schema(
     // Blog thumbnail image (URL)
     thumbnail: {
       type: String,
-      required: [true, "Thumbnail URL is required"],
+      required: [true, "thumbnail URL is required"],
       trim: true,
       // match: [/^https?:\/\/.+/, "Please provide a valid URL"],
       validate: {
         validator: (val) => validator.isURL(val),
-        message: "Thumbnail must be a valid URL",
+        message: "thumbnail must be a valid URL",
       },
     },
 

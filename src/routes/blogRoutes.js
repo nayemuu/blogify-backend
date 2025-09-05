@@ -7,10 +7,18 @@ import {
   //   updateBlog,
 } from "../controllers/blogController.js";
 import { upload } from "../utils/multer.js";
+import { checkPermission } from "../middlewares/checkPermission.js";
+import { checkAuth } from "../middlewares/checkAuth.js";
 
 const route = express.Router();
 
-route.post("/", trimRequest.all, upload.single("thumbnail"), createBlog);
+route.post(
+  "/",
+  trimRequest.all,
+  checkAuth,
+  upload.single("thumbnail"),
+  createBlog
+);
 // route.get("/", trimRequest.all, getAllBlogs);
 // route.get("/:id", trimRequest.all, getBlogById);
 // route.post("/:id", trimRequest.all, updateBlog);
