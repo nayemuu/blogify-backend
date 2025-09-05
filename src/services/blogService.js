@@ -30,16 +30,19 @@ export const getPublishedBlogsService = async (limit = 10, offset = 0) => {
     .skip(offset)
     .limit(limit)
     .populate("authorId", "name")
+    .populate("tags", "title")
     .sort({ createdAt: -1 });
 
   // sanitize blogs and remove likedBy array
   blogs = sanitizeArray(blogs).map((blog) => {
     const { likedBy, ...rest } = blog; // remove likedBy
     const author = blog.authorId ? sanitizeObject(blog.authorId) : null;
+    const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
 
     return {
       ...rest,
       authorId: author,
+      tags: tags,
       likesCount: likedBy?.length || 0, // only send number of likes
     };
   });

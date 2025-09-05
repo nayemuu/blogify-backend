@@ -7,6 +7,7 @@ import {
   createBlogService,
   getPublishedBlogsService,
 } from "../services/blogService.js";
+import mongoose from "mongoose";
 
 /**
  * 🔹 Best Practice: Layered Validation in Node.js + Mongoose
@@ -68,6 +69,29 @@ export const createBlog = catchAsync(async (req, res, next) => {
     throw new AppError("thumbnail is required", 400);
   }
 
+  if (!req.body.tags) {
+    if (file?.path) removeLocalFile(file.path);
+    throw new AppError("tags are required", 400);
+  }
+
+  let tags = [];
+  if (req.body.tags) {
+    try {
+      const parsedTags = JSON.parse(req.body.tags); // parse JSON string to array
+      // convert each item to ObjectId
+      tags = parsedTags.map((id) => new mongoose.Types.ObjectId(id));
+
+      if (!tags.length) {
+        throw new AppError("tags is required", 400);
+      }
+    } catch (err) {
+      if (file?.path) {
+        removeLocalFile(file.path);
+      }
+      throw new AppError("Invalid tags format", 400);
+    }
+  }
+
   let imageUrl;
 
   try {
@@ -78,6 +102,7 @@ export const createBlog = catchAsync(async (req, res, next) => {
     // ✅ Prepare blog data
     const blogData = {
       ...req.body,
+      tags,
       thumbnail: imageUrl,
       authorId: user.id,
       status:

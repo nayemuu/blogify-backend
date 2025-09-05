@@ -15,7 +15,7 @@ const blogSchema = new Schema(
     },
 
     // tags
-    likedBy: [
+    tags: [
       {
         type: Schema.Types.ObjectId,
         ref: "Tag",
