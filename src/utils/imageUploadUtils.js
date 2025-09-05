@@ -4,7 +4,7 @@ import { deleteFromCloudinary, uploadOnCloudinary } from "./cloudinary.js";
 export const uploadImage = async (localFilePath) => {
   try {
     const imageCredentials = await uploadOnCloudinary(localFilePath);
-    console.log("imageCredentials = ", imageCredentials);
+    // console.log("imageCredentials = ", imageCredentials);
     Image.create(imageCredentials);
     return imageCredentials;
   } catch (error) {
