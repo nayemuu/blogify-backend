@@ -41,10 +41,10 @@ const blogSchema = new Schema(
     },
 
     // Author reference
-    authorId: {
+    author: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Author ID is required"],
+      required: [true, "author ID is required"],
     },
 
     // Users who liked this blog

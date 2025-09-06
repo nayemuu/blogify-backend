@@ -5,6 +5,7 @@ import { deleteImage, uploadImage } from "../utils/imageUploadUtils.js";
 import { removeLocalFile } from "../utils/fsUtils.js";
 import {
   createBlogService,
+  getPublishedBlogByIdService,
   getPublishedBlogsService,
 } from "../services/blogService.js";
 import mongoose from "mongoose";
@@ -104,7 +105,7 @@ export const createBlog = catchAsync(async (req, res, next) => {
       ...req.body,
       tags,
       thumbnail: imageUrl,
-      authorId: user.id,
+      author: user.id,
       status:
         user?.isSuper || user?.permissions?.includes("can_publish_blog")
           ? "published"
@@ -148,5 +149,19 @@ export const getPublishedBlogs = catchAsync(async (req, res, next) => {
     offset,
     results: blogs.length,
     data: blogs,
+  });
+});
+
+/**
+ * Controller: Get a published blog by ID
+ */
+export const getPublishedBlogById = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  const blog = await getPublishedBlogByIdService(id);
+
+  res.status(200).json({
+    status: "success",
+    data: blog,
   });
 });
