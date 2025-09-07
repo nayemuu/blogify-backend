@@ -8,10 +8,10 @@ const blogSchema = new Schema(
     // Blog title
     title: {
       type: String,
-      required: [true, "Blog title is required"],
+      required: [true, "title is required"],
       trim: true,
-      minlength: [5, "Title must be at least 5 characters long"],
-      maxlength: [150, "Title cannot exceed 150 characters"],
+      minlength: [5, "title must be at least 5 characters long"],
+      maxlength: [150, "title cannot exceed 150 characters"],
     },
 
     // tags
@@ -25,7 +25,7 @@ const blogSchema = new Schema(
     // Blog main content/body
     content: {
       type: String,
-      required: [true, "Blog content is required"],
+      required: [true, "content is required"],
     },
 
     // Blog thumbnail image (URL)
@@ -67,6 +67,12 @@ const blogSchema = new Schema(
         "deleted", // Soft-deleted (not visible, but kept in DB)
       ],
       default: "pending",
+    },
+
+    // published timestamp
+    publishedAt: {
+      type: Date,
+      default: null, // stays null until status = published
     },
   },
   { timestamps: true }

@@ -9,6 +9,7 @@ import {
   getPublishedBlogsService,
 } from "../services/blogService.js";
 import mongoose from "mongoose";
+import { Blog } from "../models/blogModel.js";
 
 /**
  * 🔹 Best Practice: Layered Validation in Node.js + Mongoose
@@ -100,16 +101,20 @@ export const createBlog = catchAsync(async (req, res, next) => {
     const image = await uploadImage(file.path);
     imageUrl = image.secure_url;
 
+    // ✅ Determine blog status
+    const blogStatus =
+      user?.isSuper || user?.permissions?.includes("can_publish_blog")
+        ? "published"
+        : "pending";
+
     // ✅ Prepare blog data
     const blogData = {
       ...req.body,
       tags,
       thumbnail: imageUrl,
       author: user.id,
-      status:
-        user?.isSuper || user?.permissions?.includes("can_publish_blog")
-          ? "published"
-          : "pending",
+      status: blogStatus,
+      publishedAt: blogStatus === "published" ? new Date() : null,
     };
 
     // ✅ Save blog
@@ -159,6 +164,36 @@ export const getPublishedBlogById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
   const blog = await getPublishedBlogByIdService(id);
+
+  res.status(200).json({
+    status: "success",
+    data: blog,
+  });
+});
+
+// Change Blog Status Api
+export const updateBlogStatus = catchAsync(async (req, res, next) => {
+  const { blogId } = req.params;
+  const { status } = req.body;
+
+  if (
+    !["pending", "published", "archived", "suspended", "deleted"].includes(
+      status
+    )
+  ) {
+    throw new AppError("Invalid status", 400);
+  }
+
+  const blog = await Blog.findById(blogId);
+  if (!blog) {
+    throw new AppError("Blog not found", 404);
+  }
+
+  // ✅ Update status & publishedAt
+  blog.status = status;
+  blog.publishedAt = status === "published" ? new Date() : null;
+
+  await blog.save();
 
   res.status(200).json({
     status: "success",

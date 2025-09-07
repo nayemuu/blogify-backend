@@ -60,10 +60,9 @@ export const getPublishedBlogsService = async (limit = 10, offset = 0) => {
  * - Strips out likedBy and replaces with likesCount
  */
 export const getPublishedBlogByIdService = async (id) => {
-  const blog = await Blog.findOne({ _id: id, status: "published" }).populate(
-    "author",
-    "name email"
-  ); // populate the renamed field
+  const blog = await Blog.findOne({ _id: id, status: "published" })
+    .populate("author", "name")
+    .populate("tags", "title"); // populate the renamed field
 
   if (!blog) {
     throw new AppError("Blog not found", 404);
@@ -73,11 +72,13 @@ export const getPublishedBlogByIdService = async (id) => {
   const sanitizedBlog = sanitizeObject(blog);
 
   // Sanitize nested author
-  const sanitizedAuthor = sanitizeObject(blog.author);
+  const author = blog.author ? sanitizeObject(blog.author) : null;
+  const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
 
   return {
     ...sanitizedBlog,
-    author: sanitizedAuthor, // keep as author
+    author,
+    tags,
     likedBy: undefined, // remove likedBy field
     likesCount: blog.likedBy?.length || 0, // add likesCount instead
   };
