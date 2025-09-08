@@ -57,46 +57,38 @@ import { Blog } from "../models/blogModel.js";
  */
 
 export const createBlog = catchAsync(async (req, res, next) => {
-  const { title, content } = req.body;
+  const { title, content, tags: tagsRaw } = req.body;
   const { file, user } = req;
 
-  // ✅ Input validation
-  if (!title || !validator.isLength(title, { min: 5, max: 150 })) {
-    throw new AppError("title must be between 5 and 150 characters", 400);
-  }
-  if (!content) {
-    throw new AppError("content is required", 400);
-  }
-  if (!file?.path) {
-    throw new AppError("thumbnail is required", 400);
-  }
-
-  if (!req.body.tags) {
-    if (file?.path) removeLocalFile(file.path);
-    throw new AppError("tags are required", 400);
-  }
-
   let tags = [];
-  if (req.body.tags) {
-    try {
-      const parsedTags = JSON.parse(req.body.tags); // parse JSON string to array
-      // convert each item to ObjectId
-      tags = parsedTags.map((id) => new mongoose.Types.ObjectId(id));
-
-      if (!tags.length) {
-        throw new AppError("tags is required", 400);
-      }
-    } catch (err) {
-      if (file?.path) {
-        removeLocalFile(file.path);
-      }
-      throw new AppError("Invalid tags format", 400);
-    }
-  }
-
   let imageUrl;
 
   try {
+    // ✅ Validate input
+    if (!title || !validator.isLength(title, { min: 5, max: 150 })) {
+      throw new AppError("title must be between 5 and 150 characters", 400);
+    }
+
+    if (!content) {
+      throw new AppError("content is required", 400);
+    }
+
+    if (!file?.path) {
+      throw new AppError("thumbnail is required", 400);
+    }
+
+    if (!tagsRaw) {
+      throw new AppError("tags are required", 400);
+    }
+
+    // ✅ Parse and validate tags
+    const parsedTags = JSON.parse(tagsRaw);
+    if (!Array.isArray(parsedTags) || parsedTags.length === 0) {
+      throw new AppError("tags are required", 400);
+    }
+
+    tags = parsedTags.map((id) => new mongoose.Types.ObjectId(id));
+
     // ✅ Upload image
     const image = await uploadImage(file.path);
     imageUrl = image.secure_url;
@@ -125,13 +117,13 @@ export const createBlog = catchAsync(async (req, res, next) => {
       data: blog,
     });
   } catch (error) {
-    // ✅ Rollback image if DB fails
+    // ✅ Rollback uploaded image if DB fails or validation throws after upload
     if (imageUrl) {
       await deleteImage(imageUrl);
     }
     throw error;
   } finally {
-    // ✅ Always clean up local file
+    // ✅ Always clean up local file on *any* outcome (success or error)
     if (file?.path) {
       removeLocalFile(file.path);
     }
