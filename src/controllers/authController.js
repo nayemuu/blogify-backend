@@ -120,3 +120,13 @@ export const refreshToken = catchAsync(async (req, res, next) => {
     accessToken,
   });
 });
+
+export const logout = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body || {};
+
+  // console.log("refreshToken = ", refreshToken);
+
+  res.status(200).json({
+    status: "success",
+  });
+});
