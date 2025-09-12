@@ -13,48 +13,20 @@ import { sentOTP } from "../services/sendOtpService.js";
 
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, picture, password } = req.body || {};
-  const user = await createUser({
-    name,
-    email,
-    picture,
-    password,
-  });
 
-  console.log("user = ", user);
+  // 1. Create user
+  const user = await createUser({ name, email, picture, password });
 
+  // 2. Send OTP for email verification
   await sentOTP({
     id: user._id,
     otpType: "email_verification",
     expiresIn: 60 * 60 * 1000, // 1 hour
   });
 
-  // const access = generateToken(
-  //   { id: user._id, type: "access" },
-  //   process.env.ACCESS_TOKEN_SECRET,
-  //   {
-  //     expiresIn: process.env.JWT_EXPIRES_IN,
-  //   }
-  // );
-
-  // const refresh = generateToken(
-  //   { id: user._id, type: "refresh" },
-  //   process.env.REFRESH_TOKEN_SECRET,
-  //   {
-  //     expiresIn: process.env.REFRESH_JWT_EXPIRES_IN,
-  //   }
-  // );
-
+  // 3. Respond to client
   res.status(201).json({
     status: "success",
-    // data: {
-    //   user: {
-    //     name: user.name,
-    //     email: user.email,
-    //     picture: user.picture,
-    //   },
-    //   tokens: { access, refresh },
-    // },
-
     message:
       "User successfully registered. An OTP has been sent to your email. Please verify within 1 hour.",
   });

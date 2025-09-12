@@ -10,96 +10,58 @@ import jwt from "jsonwebtoken";
 export const createUser = async (userData) => {
   const { name, email, picture, password } = userData;
 
-  //check if fields are empty
+  // 1. Validate required fields
   if (!name || !email || !password) {
-    throw new AppError("Please fill all fields.", 400);
+    throw new AppError("Please fill all required fields.", 400);
   }
 
-  //check name length
-  if (
-    !validator.isLength(name, {
-      min: 2,
-      max: 30,
-    })
-  ) {
-    throw new AppError(
-      "Plase make sure your name is between 2 and 30 characters.",
-      400
-    );
+  // 2. Validate name length
+  if (!validator.isLength(name, { min: 2, max: 30 })) {
+    throw new AppError("Name must be between 2 and 30 characters.", 400);
   }
 
-  //check if email address is valid
+  // 3. Validate email format
   if (!validator.isEmail(email)) {
-    throw new AppError(
-      "Please make sure to provide a valid email address.",
-      400
-    );
+    throw new AppError("Please provide a valid email address.", 400);
   }
 
-  //check if user already exist
-  const isUserExists = await User.findOne({ email });
-  if (isUserExists) {
-    throw new AppError(
-      "Please try again with a different email address, this email already exist.",
-      409
-    );
+  // 4. Check if user with this email already exists
+  const existingUser = await User.findOne({ email });
+
+  if (existingUser) {
+    // 4a. If user is pending and expired, delete and allow re-registration
+    if (
+      existingUser.status === "pending" &&
+      existingUser.verificationExpiresAt &&
+      existingUser.verificationExpiresAt < new Date()
+    ) {
+      await User.deleteOne({ _id: existingUser._id });
+    } else {
+      // 4b. Otherwise, email is taken
+      throw new AppError(
+        "This email is already associated with an account.",
+        409
+      );
+    }
   }
 
-  //check password length
-  if (
-    !validator.isLength(password, {
-      min: 6,
-      max: 20,
-    })
-  ) {
-    throw new AppError(
-      "Please make sure your password is between 6 and 20 characters.",
-      400
-    );
+  // 5. Validate password length
+  if (!validator.isLength(password, { min: 6, max: 20 })) {
+    throw new AppError("Password must be between 6 and 20 characters.", 400);
   }
 
+  // 6. Create new user with pending status and 1-hour verification window
   const newUser = await User.create({
     name,
     email,
+    picture,
     password,
+    status: "pending",
+    verificationExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
   });
 
-  // console.log("newUser = ", newUser);
-
-  // Convert the Mongoose document into a plain JavaScript object
+  // 7. Sanitize output
   const sanitizedUser = newUser.toObject();
-
-  /**
-   * @function toObject
-   * @description Converts a Mongoose document into a plain JavaScript object.
-   *
-   * @why
-   * Mongoose documents (e.g., `newUser`) are not plain objects — they are instances of
-   * Mongoose's internal `Document` class and include:
-   * - Built-in instance methods (`save()`, `populate()`, etc.)
-   * - Virtual properties and getters/setters
-   * - Internal metadata and symbols (e.g., `$__`, `_doc`)
-   *
-   * @benefits
-   * Calling `.toObject()`:
-   * - ✅ Converts the document to a plain JavaScript object
-   * - ✅ Removes Mongoose-specific internals
-   * - ✅ Allows safe manipulation (e.g., deleting sensitive fields like `password`)
-   * - ✅ Prepares data for serialization or sending in API responses
-   *
-   * @usecase
-   * Use `.toObject()` when you need to:
-   * - Sanitize a user object before returning it to the frontend
-   * - Clone a document without including internal methods or metadata
-   * - Work with libraries expecting plain objects (e.g., `lodash`, `JSON.stringify`)
-   *
-   * @example
-   * const userDoc = await User.findById(id);
-   * const userObj = userDoc.toObject();
-   * delete userObj.password;
-   * return res.json(userObj);
-   */
-
   delete sanitizedUser.password;
   delete sanitizedUser.isSuper;
   delete sanitizedUser.__v;
@@ -345,3 +307,34 @@ export const refreshTokenService = async (refreshToken) => {
 
   return accessToken;
 };
+
+/**
+ * @function toObject
+ * @description Converts a Mongoose document into a plain JavaScript object.
+ *
+ * @why
+ * Mongoose documents (e.g., `newUser`) are not plain objects — they are instances of
+ * Mongoose's internal `Document` class and include:
+ * - Built-in instance methods (`save()`, `populate()`, etc.)
+ * - Virtual properties and getters/setters
+ * - Internal metadata and symbols (e.g., `$__`, `_doc`)
+ *
+ * @benefits
+ * Calling `.toObject()`:
+ * - ✅ Converts the document to a plain JavaScript object
+ * - ✅ Removes Mongoose-specific internals
+ * - ✅ Allows safe manipulation (e.g., deleting sensitive fields like `password`)
+ * - ✅ Prepares data for serialization or sending in API responses
+ *
+ * @usecase
+ * Use `.toObject()` when you need to:
+ * - Sanitize a user object before returning it to the frontend
+ * - Clone a document without including internal methods or metadata
+ * - Work with libraries expecting plain objects (e.g., `lodash`, `JSON.stringify`)
+ *
+ * @example
+ * const userDoc = await User.findById(id);
+ * const userObj = userDoc.toObject();
+ * delete userObj.password;
+ * return res.json(userObj);
+ */
