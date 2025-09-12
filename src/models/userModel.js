@@ -50,12 +50,18 @@ const userSchema = new Schema(
     status: {
       type: String,
       required: [true, "status is required"],
-      enum: ["active", "inactive", "suspended", "deleted"],
+      enum: ["pending", "active", "inactive", "suspended", "deleted"],
+      // "pending" → User just registered, but hasn't verified email yet.
       // active → User can use everything.
       // inactive → User cannot log in or access anything.
       // suspended → User can only see their profile, but cannot post/engage; existing content hidden.
       // deleted → User is soft-deleted (kept in DB for record/audit, but not visible in app).
       default: "active",
+    },
+
+    verificationExpiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 60 * 60 * 1000), // 1 hour
     },
   },
   { timestamps: true }

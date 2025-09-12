@@ -101,7 +101,7 @@ export const createUser = async (userData) => {
    */
 
   delete sanitizedUser.password;
-  delete sanitizedUser.isSuperUser;
+  delete sanitizedUser.isSuper;
   delete sanitizedUser.__v;
 
   return sanitizedUser;
