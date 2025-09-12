@@ -58,11 +58,6 @@ const userSchema = new Schema(
       // deleted → User is soft-deleted (kept in DB for record/audit, but not visible in app).
       default: "active",
     },
-
-    verificationExpiresAt: {
-      type: Date,
-      default: () => new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-    },
   },
   { timestamps: true }
 );

@@ -12,23 +12,23 @@ import { generateToken } from "../utils/tokenUtils.js";
 import { sentOTP } from "../services/sendOtpService.js";
 
 export const register = catchAsync(async (req, res, next) => {
-  const { name, email, picture, password } = req.body || {};
+  const { name, email, picture, password } = req.body;
 
-  // 1. Create user
-  const user = await createUser({ name, email, picture, password });
-
-  // 2. Send OTP for email verification
-  await sentOTP({
-    id: user._id,
-    otpType: "email_verification",
-    expiresIn: 60 * 60 * 1000, // 1 hour
+  const { user, otpCode } = await createUser({
+    name,
+    email,
+    picture,
+    password,
   });
 
-  // 3. Respond to client
   res.status(201).json({
     status: "success",
     message:
-      "User successfully registered. An OTP has been sent to your email. Please verify within 1 hour.",
+      "User successfully registered. An OTP has been sent to your email. Please verify within 5 minutes.",
+    data: {
+      id: user._id,
+      email: user.email,
+    },
   });
 });
 

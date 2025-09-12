@@ -6,38 +6,54 @@ import { generateOtp } from "../utils/otpUtils.js";
 import { OTP } from "../models/otpModel.js";
 import { generateToken } from "../utils/tokenUtils.js";
 import jwt from "jsonwebtoken";
+import { sentOTP } from "./sendOtpService.js";
 
-export const createUser = async (userData) => {
-  const { name, email, picture, password } = userData;
-
+export const createUser = async ({ name, email, picture, password }) => {
   // 1. Validate required fields
   if (!name || !email || !password) {
     throw new AppError("Please fill all required fields.", 400);
   }
 
-  // 2. Validate name length
+  // 2. Validate name
   if (!validator.isLength(name, { min: 2, max: 30 })) {
     throw new AppError("Name must be between 2 and 30 characters.", 400);
   }
 
-  // 3. Validate email format
+  // 3. Validate email
   if (!validator.isEmail(email)) {
     throw new AppError("Please provide a valid email address.", 400);
   }
 
-  // 4. Check if user with this email already exists
+  // 4. Validate password
+  if (!validator.isLength(password, { min: 6, max: 20 })) {
+    throw new AppError("Password must be between 6 and 20 characters.", 400);
+  }
+
+  // 5. Check if user exists
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
-    // 4a. If user is pending and expired, delete and allow re-registration
-    if (
-      existingUser.status === "pending" &&
-      existingUser.verificationExpiresAt &&
-      existingUser.verificationExpiresAt < new Date()
-    ) {
+    if (existingUser.status === "pending") {
+      // Find existing OTP
+      const otpDoc = await OTP.findOne({
+        user: existingUser._id,
+        otpType: "email_verification",
+      });
+
+      if (otpDoc && otpDoc.expiresAt > new Date()) {
+        throw new AppError(
+          "You already registered but haven't verified OTP. Please try again after 5 minutes.",
+          400
+        );
+      }
+
+      // OTP expired → cleanup old data
+      await OTP.deleteMany({
+        user: existingUser._id,
+        otpType: "email_verification",
+      });
       await User.deleteOne({ _id: existingUser._id });
     } else {
-      // 4b. Otherwise, email is taken
       throw new AppError(
         "This email is already associated with an account.",
         409
@@ -45,28 +61,23 @@ export const createUser = async (userData) => {
     }
   }
 
-  // 5. Validate password length
-  if (!validator.isLength(password, { min: 6, max: 20 })) {
-    throw new AppError("Password must be between 6 and 20 characters.", 400);
-  }
-
-  // 6. Create new user with pending status and 1-hour verification window
+  // 6. Create user with "pending" status
   const newUser = await User.create({
     name,
     email,
     picture,
     password,
     status: "pending",
-    verificationExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
   });
 
-  // 7. Sanitize output
-  const sanitizedUser = newUser.toObject();
-  delete sanitizedUser.password;
-  delete sanitizedUser.isSuper;
-  delete sanitizedUser.__v;
+  // 7. Send OTP for email verification
+  const otpCode = await sentOTP({
+    id: newUser._id,
+    otpType: "email_verification",
+    expiresIn: 5 * 60 * 1000, // 5 minutes
+  });
 
-  return sanitizedUser;
+  return { user: newUser, otpCode };
 };
 
 export const authenticateUser = async (email, password) => {
