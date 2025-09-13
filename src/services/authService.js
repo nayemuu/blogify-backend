@@ -89,13 +89,17 @@ export const createUser = async ({ name, email, picture, password }) => {
    * ✅ Professional look (heading, bold OTP, disclaimer).
    */
 
-  sendEmail({
-    to: email,
-    subject: "Verify Your Email Address",
-    text: `Your account activation code is ${otpCode}. 
+  // ✅ Only send real emails in non-development environments
+  if (process.env.NODE_ENV === "development") {
+    console.log(`📩 [DEV MODE] OTP for ${email}: ${otpCode}`);
+  } else {
+    sendEmail({
+      to: email,
+      subject: "Verify Your Email Address",
+      text: `Your account activation code is ${otpCode}. 
     This code will expire in 5 minutes. 
     If you did not request this, please ignore this email.`,
-    html: `
+      html: `
     <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
       <h2 style="color:#4CAF50;">Email Verification</h2>
       <p>Thank you for signing up! Please use the verification code below to activate your account:</p>
@@ -108,7 +112,8 @@ export const createUser = async ({ name, email, picture, password }) => {
       <p style="font-size:12px; color:#777;">This is an automated message. Please do not reply.</p>
     </div>
   `,
-  });
+    });
+  }
 
   return { user: newUser, otpCode };
 };
@@ -199,11 +204,15 @@ export const resendVerificationService = async ({ email }) => {
   });
 
   // Send email
-  await sendEmail({
-    to: email,
-    subject: "Verify Your Email Address",
-    text: `Your account activation code is ${otpCode}. This code will expire in 5 minutes.`,
-    html: `
+  // ✅ Only send real emails in non-development environments
+  if (process.env.NODE_ENV === "development") {
+    console.log(`📩 [DEV MODE] OTP for ${email}: ${otpCode}`);
+  } else {
+    await sendEmail({
+      to: email,
+      subject: "Verify Your Email Address",
+      text: `Your account activation code is ${otpCode}. This code will expire in 5 minutes.`,
+      html: `
       <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
         <h2 style="color:#4CAF50;">Email Verification</h2>
         <p>Please use the following OTP to verify your account:</p>
@@ -214,7 +223,8 @@ export const resendVerificationService = async ({ email }) => {
         <p style="font-size:12px; color:#777;">This is an automated message. Do not reply.</p>
       </div>
     `,
-  });
+    });
+  }
 
   return true;
 };
