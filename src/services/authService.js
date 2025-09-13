@@ -7,6 +7,7 @@ import { OTP } from "../models/otpModel.js";
 import { generateToken } from "../utils/tokenUtils.js";
 import jwt from "jsonwebtoken";
 import { sentOTP } from "./sendOtpService.js";
+import { sendEmail } from "../utils/emailUtils.js";
 
 export const createUser = async ({ name, email, picture, password }) => {
   // 1. Validate required fields
@@ -75,6 +76,27 @@ export const createUser = async ({ name, email, picture, password }) => {
     id: newUser._id,
     otpType: "email_verification",
     expiresIn: 5 * 60 * 1000, // 5 minutes
+  });
+
+  sendEmail({
+    to: email,
+    subject: "Verify Your Email Address",
+    text: `Your account activation code is ${otpCode}. 
+    This code will expire in 5 minutes. 
+    If you did not request this, please ignore this email.`,
+    html: `
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+      <h2 style="color:#4CAF50;">Email Verification</h2>
+      <p>Thank you for signing up! Please use the verification code below to activate your account:</p>
+      <p style="font-size:20px; font-weight:bold; color:#000; letter-spacing:2px;">
+        ${otpCode}
+      </p>
+      <p>This code will expire in <b>5 minutes</b>.</p>
+      <p>If you did not request this, you can safely ignore this email.</p>
+      <hr />
+      <p style="font-size:12px; color:#777;">This is an automated message. Please do not reply.</p>
+    </div>
+  `,
   });
 
   return { user: newUser, otpCode };
