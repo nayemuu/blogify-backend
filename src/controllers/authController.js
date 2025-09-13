@@ -5,11 +5,11 @@ import {
   forgotPasswordService,
   updatePassword,
   refreshTokenService,
+  verifyEmailService,
 } from "../services/authService.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { generateToken } from "../utils/tokenUtils.js";
-import { sentOTP } from "../services/sendOtpService.js";
 
 export const register = catchAsync(async (req, res, next) => {
   const { name, email, picture, password } = req.body;
@@ -29,6 +29,22 @@ export const register = catchAsync(async (req, res, next) => {
       id: user._id,
       email: user.email,
     },
+  });
+});
+
+/**
+ * @desc Verify user email with OTP
+ * @route POST /api/v1/auth/verify-email
+ * @access Public
+ */
+export const verifyEmailController = catchAsync(async (req, res, next) => {
+  const { email, otpCode } = req.body || {};
+
+  await verifyEmailService({ email, otpCode });
+
+  res.status(200).json({
+    status: "success",
+    message: "Your email has been successfully verified. You can now log in.",
   });
 });
 

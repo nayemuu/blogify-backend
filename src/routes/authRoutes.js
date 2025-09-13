@@ -2,6 +2,7 @@ import express from "express";
 import trimRequest from "trim-request";
 import {
   register,
+  verifyEmailController,
   login,
   forgotPassword,
   resetPassword,
@@ -12,6 +13,7 @@ import {
 const route = express.Router();
 
 route.post("/register", trimRequest.all, register);
+route.post("/verify-email", trimRequest.all, verifyEmailController);
 route.post("/login", trimRequest.all, login);
 route.post("/forgot-password", trimRequest.all, forgotPassword);
 route.post("/reset-password", trimRequest.all, resetPassword);

@@ -113,6 +113,58 @@ export const createUser = async ({ name, email, picture, password }) => {
   return { user: newUser, otpCode };
 };
 
+/**
+ * Service: Verify email using OTP
+ * 1. Validate request
+ * 2. Find user
+ * 3. Find OTP and check validity
+ * 4. Activate user & cleanup OTP
+ */
+export const verifyEmailService = async ({ email, otpCode }) => {
+  // 1. Validate inputs
+  if (!email || !otpCode) {
+    throw new AppError("Email and OTP are required", 400);
+  }
+
+  // 2. Find user
+  const user = await User.findOne({ email }).select("+status");
+  if (!user) {
+    throw new AppError("No user found with this email", 404);
+  }
+
+  if (user.status !== "pending") {
+    throw new AppError("This account is already verified or not pending", 400);
+  }
+
+  // 3. Find OTP
+  const otpDoc = await OTP.findOne({
+    user: user._id,
+    otpType: "email_verification",
+  });
+  if (!otpDoc) {
+    throw new AppError("No OTP found. Please request a new one.", 404);
+  }
+
+  // 4. Validate OTP code
+  if (otpDoc.otpCode !== Number(otpCode)) {
+    throw new AppError("Invalid OTP code", 400);
+  }
+
+  // 5. Check expiration
+  if (otpDoc.expiresAt < new Date()) {
+    throw new AppError("OTP expired. Please request a new one.", 400);
+  }
+
+  // 6. Update user → active
+  user.status = "active";
+  await user.save();
+
+  // 7. Delete OTP document (cleanup)
+  await OTP.deleteOne({ _id: otpDoc._id });
+
+  return true;
+};
+
 export const authenticateUser = async (email, password) => {
   const user = await User.findOne({ email }).select("+password name email");
 
