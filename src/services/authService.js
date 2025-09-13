@@ -78,6 +78,17 @@ export const createUser = async ({ name, email, picture, password }) => {
     expiresIn: 5 * 60 * 1000, // 5 minutes
   });
 
+  /**
+   * Send email verification OTP to user.
+   *
+   * Improvements:
+   * ✅ Subject is clearer: "Verify Your Email Address".
+   * ✅ Plain text (`text`) version included (for clients that don’t render HTML).
+   * ✅ HTML version styled with simple inline CSS for readability.
+   * ✅ Mentions expiry time and a safety note if it wasn’t requested.
+   * ✅ Professional look (heading, bold OTP, disclaimer).
+   */
+
   sendEmail({
     to: email,
     subject: "Verify Your Email Address",
