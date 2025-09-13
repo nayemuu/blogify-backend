@@ -3,6 +3,7 @@ import trimRequest from "trim-request";
 import {
   register,
   verifyEmailController,
+  resendVerificationController,
   login,
   forgotPassword,
   resetPassword,
@@ -14,6 +15,11 @@ const route = express.Router();
 
 route.post("/register", trimRequest.all, register);
 route.post("/verify-email", trimRequest.all, verifyEmailController);
+route.post(
+  "/resend-verification",
+  trimRequest.all,
+  resendVerificationController
+);
 route.post("/login", trimRequest.all, login);
 route.post("/forgot-password", trimRequest.all, forgotPassword);
 route.post("/reset-password", trimRequest.all, resetPassword);

@@ -165,6 +165,60 @@ export const verifyEmailService = async ({ email, otpCode }) => {
   return true;
 };
 
+/**
+ * Service: Resend OTP for email verification
+ */
+export const resendVerificationService = async ({ email }) => {
+  if (!email) throw new AppError("Email is required", 400);
+
+  const user = await User.findOne({ email }).select("+status");
+  if (!user) throw new AppError("No user found with this email", 404);
+
+  if (user.status !== "pending") {
+    throw new AppError("This account is already verified or not pending", 400);
+  }
+
+  // Check if existing OTP is still valid
+  const existingOtp = await OTP.findOne({
+    user: user._id,
+    otpType: "email_verification",
+  });
+
+  if (existingOtp && existingOtp.expiresAt > new Date()) {
+    throw new AppError(
+      "You already requested an OTP recently. Please try again later.",
+      429
+    );
+  }
+
+  // Generate & save new OTP
+  const otpCode = await sentOTP({
+    id: user._id,
+    otpType: "email_verification",
+    expiresIn: 5 * 60 * 1000,
+  });
+
+  // Send email
+  await sendEmail({
+    to: email,
+    subject: "Verify Your Email Address",
+    text: `Your account activation code is ${otpCode}. This code will expire in 5 minutes.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
+        <h2 style="color:#4CAF50;">Email Verification</h2>
+        <p>Please use the following OTP to verify your account:</p>
+        <p style="font-size:20px; font-weight:bold; letter-spacing:2px;">${otpCode}</p>
+        <p>This code will expire in <b>5 minutes</b>.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <hr/>
+        <p style="font-size:12px; color:#777;">This is an automated message. Do not reply.</p>
+      </div>
+    `,
+  });
+
+  return true;
+};
+
 export const authenticateUser = async (email, password) => {
   const user = await User.findOne({ email }).select("+password name email");
 

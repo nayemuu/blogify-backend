@@ -6,6 +6,7 @@ import {
   updatePassword,
   refreshTokenService,
   verifyEmailService,
+  resendVerificationService,
 } from "../services/authService.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
@@ -47,6 +48,25 @@ export const verifyEmailController = catchAsync(async (req, res, next) => {
     message: "Your email has been successfully verified. You can now log in.",
   });
 });
+
+/**
+ * @desc Resend OTP for email verification
+ * @route POST /api/v1/auth/resend-verification
+ * @access Public
+ */
+export const resendVerificationController = catchAsync(
+  async (req, res, next) => {
+    const { email } = req.body;
+
+    await resendVerificationService({ email });
+
+    res.status(200).json({
+      status: "success",
+      message:
+        "A new OTP has been sent to your email. Please verify within 5 minutes.",
+    });
+  }
+);
 
 export const login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body || {};
