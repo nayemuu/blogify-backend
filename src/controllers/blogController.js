@@ -94,10 +94,12 @@ export const createBlog = catchAsync(async (req, res, next) => {
     imageUrl = image.secure_url;
 
     // ✅ Determine blog status
-    const blogStatus =
-      user?.isSuper || user?.permissions?.includes("can_publish_blog")
-        ? "published"
-        : "pending";
+    // const blogStatus =
+    //   user?.isSuper || user?.permissions?.includes("can_publish_blog")
+    //     ? "published"
+    //     : "pending";
+
+    const blogStatus = "published";
 
     // ✅ Prepare blog data
     const blogData = {

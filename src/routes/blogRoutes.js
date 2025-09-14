@@ -19,7 +19,7 @@ route.post(
   trimRequest.all,
   checkAuth,
   upload.single("thumbnail"),
-  checkPermission("can_create_blog"),
+  // checkPermission("can_create_blog"),
   createBlog
 );
 route.get("/", trimRequest.all, getPublishedBlogs);

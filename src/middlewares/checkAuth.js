@@ -36,8 +36,9 @@ export const checkAuth = catchAsync(async (req, res, next) => {
   }
 
   // Step 3 - Check if user still exists
-  const user = await User.findById(decoded.id).select("_id");
+  const user = await User.findById(decoded.id).select("_id status");
   // console.log("user = ", user);
+
   if (!user) {
     throw new AppError(
       "The user belonging to this token no longer exists",
@@ -45,11 +46,39 @@ export const checkAuth = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Step 4 - Check User Status (e.g. isActive, isBanned)
+  // Step 4 - Check User Status
 
-  //   if (!user.isActive) {
-  //   throw new AppError("Unauthorized - User account is inactive", 403);
-  // }
+  /**
+   * Extra safety check for "pending" users.
+   *
+   * Normally, users with a "pending" status should never receive an access token
+   * because they must verify their email before logging in. However, this check
+   * acts as a safeguard in case a pending token is somehow issued (e.g., due to
+   * a bug, replay attack, or other edge case).
+   *
+   * If a pending user attempts to access a protected route, deny access and
+   * prompt them to complete the registration/verification process.
+   */
+  if (user.status === "pending") {
+    throw new AppError(
+      "Your account is not verified. Please complete the registration process and log in again.",
+      403
+    );
+  }
+
+  if (user.status === "inactive") {
+    throw new AppError(
+      "Your account is inactive. Please contact support to reactivate it.",
+      403
+    );
+  }
+
+  if (user.status === "deleted") {
+    throw new AppError(
+      "Your account has been deleted. Please register again to access the service.",
+      403
+    );
+  }
 
   // Step 5 - Check if password was changed after token issued
   if (user.isPasswordChanged(decoded.iat)) {
