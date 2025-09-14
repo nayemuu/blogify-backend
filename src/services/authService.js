@@ -230,10 +230,27 @@ export const resendVerificationService = async ({ email }) => {
 };
 
 export const authenticateUser = async (email, password) => {
-  const user = await User.findOne({ email }).select("+password name email");
+  const user = await User.findOne({ email }).select(
+    "+password name email status"
+  );
 
   if (!user) {
     throw new AppError("Invalid credentials.", 400);
+  }
+
+  // Handle blocked statuses
+  if (user.status === "pending") {
+    throw new AppError(
+      "Your account is not verified. Please complete the registration process again to login.",
+      403
+    );
+  }
+
+  if (["inactive", "deleted"].includes(user.status)) {
+    throw new AppError(
+      `Your account is ${user.status}. Please contact support if you think this is a mistake.`,
+      403
+    );
   }
 
   const passwordMatches = await user.isPasswordValid(password, user.password);
@@ -241,10 +258,7 @@ export const authenticateUser = async (email, password) => {
     throw new AppError("Invalid credentials.", 400);
   }
 
-  // Convert Mongoose document to plain object
-  const sanitizedUser = user.toObject(); // or user.toJSON()
-
-  // Remove sensitive data
+  const sanitizedUser = user.toObject();
   delete sanitizedUser.password;
 
   return sanitizedUser;
