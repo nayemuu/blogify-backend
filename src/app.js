@@ -6,6 +6,7 @@ import { AppError } from "./utils/appError.js";
 import { checkAuth } from "./middlewares/checkAuth.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { checkDatabaseConnection } from "./utils/databaseUtils.js";
 
 //create express app
 const app = express();
@@ -67,7 +68,9 @@ app.use(express.static(publicPath));
 //cors
 app.use(cors());
 
-app.post("/", (req, res) => {
+app.use(checkDatabaseConnection);
+
+app.get("/", (req, res) => {
   res.status(200).json({
     status: "success",
     // data:data//
