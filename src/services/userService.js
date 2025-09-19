@@ -66,6 +66,7 @@ export const getUserBlogs = async (id, { status, limit = 10, offset = 0 }) => {
     count,
     limit,
     offset,
+    results: blogs.length,
     blogs,
   };
 };

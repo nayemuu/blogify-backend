@@ -147,7 +147,7 @@ export const getPublishedBlogs = catchAsync(async (req, res, next) => {
     limit,
     offset,
     results: blogs.length,
-    data: blogs,
+    blogs: blogs,
   });
 });
 
