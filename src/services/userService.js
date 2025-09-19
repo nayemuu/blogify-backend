@@ -20,20 +20,21 @@ export const getUserProfile = async (id) => {
 
 /**
  * Get user blogs with optional status + pagination
- * @param {string} id - User ID
+ * @param {string} id - Current user's ID (also the author ID)
  * @param {Object} options - Query options
  * @param {string} [options.status] - Blog status filter
  * @param {number} [options.limit=10] - Number of blogs to fetch
  * @param {number} [options.offset=0] - Number of blogs to skip
  * @returns {Promise<{count: number, limit: number, offset: number, blogs: Array}>}
  */
+
 export const getUserBlogs = async (id, { status, limit = 10, offset = 0 }) => {
   // Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError("Invalid user ID", 400);
   }
 
-  // Build filter
+  // Build filter (only fetch blogs authored by this user)
   const filter = { author: id };
   if (status) filter.status = status;
 
@@ -48,9 +49,9 @@ export const getUserBlogs = async (id, { status, limit = 10, offset = 0 }) => {
     .populate("tags", "title")
     .sort({ createdAt: -1 });
 
-  // Sanitize blogs and remove likedBy
+  // Sanitize blogs and add isLiked
   blogs = sanitizeArray(blogs).map((blog) => {
-    const { likedBy, ...rest } = blog; // remove likedBy
+    const { likedBy, ...rest } = blog;
     const author = blog.author ? sanitizeObject(blog.author) : null;
     const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
 
@@ -58,7 +59,9 @@ export const getUserBlogs = async (id, { status, limit = 10, offset = 0 }) => {
       ...rest,
       author,
       tags,
-      likesCount: likedBy?.length || 0, // send only likes count
+      likesCount: likedBy?.length || 0,
+      isLiked:
+        likedBy?.some((userId) => userId.toString() === id.toString()) || false, // true if current user liked it
     };
   });
 
@@ -70,6 +73,8 @@ export const getUserBlogs = async (id, { status, limit = 10, offset = 0 }) => {
     blogs,
   };
 };
+
+//hey chatgpt, Add isLiked property also in this service
 
 /**
  * Toggle like/unlike for a blog
