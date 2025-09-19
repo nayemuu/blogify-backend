@@ -1,4 +1,9 @@
-import { getUserProfile, getUserBlogs } from "../services/userService.js";
+import {
+  getUserProfile,
+  getUserBlogs,
+  toggleLikeBlogService,
+} from "../services/userService.js";
+import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
 export const profileController = catchAsync(async (req, res, next) => {
@@ -8,7 +13,7 @@ export const profileController = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     status: "success",
-    data: { user: userProfileData },
+    data: { user: user },
   });
 });
 
@@ -25,5 +30,20 @@ export const getMyBlogs = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     ...result,
+  });
+});
+
+export const toggleLikeBlogController = catchAsync(async (req, res, next) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError("You must be logged in first", 401);
+  }
+
+  const blogId = req.params.id;
+  const updatedBlog = await toggleLikeBlogService(blogId, userId);
+
+  res.status(200).json({
+    status: "success",
+    data: updatedBlog,
   });
 });

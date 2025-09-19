@@ -15,7 +15,7 @@ export const getUserProfile = async (id) => {
     throw new AppError("User not found with the provided ID", 404);
   }
 
-  return user.toObject();
+  return sanitizeObject(user.toObject());
 };
 
 /**
@@ -68,5 +68,47 @@ export const getUserBlogs = async (id, { status, limit = 10, offset = 0 }) => {
     offset,
     results: blogs.length,
     blogs,
+  };
+};
+
+/**
+ * Toggle like/unlike for a blog
+ * @param {string} blogId - Blog ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} - Sanitized updated blog with likesCount & isLiked
+ */
+export const toggleLikeBlogService = async (blogId, userId) => {
+  const blog = await Blog.findById(blogId)
+    .populate("author", "name email picture")
+    .populate("tags", "title");
+
+  if (!blog) {
+    throw new AppError("Blog not found", 404);
+  }
+
+  const alreadyLiked = blog.likedBy.includes(userId);
+
+  if (alreadyLiked) {
+    // Unlike
+    blog.likedBy.pull(userId);
+  } else {
+    // Like
+    blog.likedBy.push(userId);
+  }
+
+  await blog.save();
+
+  // Convert to plain object
+  const { likedBy, ...rest } = blog.toObject({ virtuals: true });
+
+  const author = blog.author ? sanitizeObject(blog.author) : null;
+  const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
+
+  return {
+    ...rest,
+    author,
+    tags,
+    likesCount: likedBy?.length || 0,
+    isLiked: !alreadyLiked, // reflect latest action
   };
 };
