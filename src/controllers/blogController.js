@@ -170,6 +170,11 @@ export const getPublishedBlogById = catchAsync(async (req, res, next) => {
   // Step 2 - Fetch the blog with optional personalization
   const blog = await getPublishedBlogByIdService(id, currentUserId);
 
+  // 🚀 Step 2.5 - Prevent browser from reusing cached 304 response
+  // res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  // res.setHeader("Pragma", "no-cache");
+  // res.setHeader("Expires", "0");
+
   // Step 3 - Send response
   res.status(200).json({
     status: "success",
