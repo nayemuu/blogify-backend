@@ -56,22 +56,19 @@ export const getPublishedBlogsService = async (limit = 10, offset = 0) => {
 /**
  * Service: Get a single published blog by ID
  * - Only returns if status is "published"
- * - Populates author
- * - Strips out likedBy and replaces with likesCount
+ * - Populates author & tags
+ * - Removes likedBy, replaces with likesCount & isLiked
  */
-export const getPublishedBlogByIdService = async (id) => {
+export const getPublishedBlogByIdService = async (id, currentUserId = null) => {
   const blog = await Blog.findOne({ _id: id, status: "published" })
-    .populate("author", "name")
-    .populate("tags", "title"); // populate the renamed field
+    .populate("author", "name email picture")
+    .populate("tags", "title");
 
   if (!blog) {
     throw new AppError("Blog not found", 404);
   }
 
-  // Sanitize main blog doc
   const sanitizedBlog = sanitizeObject(blog);
-
-  // Sanitize nested author
   const author = blog.author ? sanitizeObject(blog.author) : null;
   const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
 
@@ -79,7 +76,24 @@ export const getPublishedBlogByIdService = async (id) => {
     ...sanitizedBlog,
     author,
     tags,
-    likedBy: undefined, // remove likedBy field
-    likesCount: blog.likedBy?.length || 0, // add likesCount instead
+    likesCount: blog.likedBy?.length || 0,
+    isLiked: currentUserId
+      ? blog.likedBy?.some(
+          (userId) => userId.toString() === currentUserId.toString()
+        )
+      : false, // logged-out users always false
+    // 🚫 explicitly remove likedBy
+    likedBy: undefined,
   };
 };
+/* Note:
+ * - The `likedBy` field is **removed** by setting `likedBy: undefined`.
+ * - In JavaScript, properties with value `undefined` are **not included**
+ *   when an object is serialized to JSON (`res.json()`).
+ *   Example:
+ *   ```js
+ *   JSON.stringify({ a: 1, b: undefined }); // {"a":1}
+ *   ```
+ *   That’s why you won’t see `likedBy` in the API response.
+ * - If you want the property to appear as empty, use `null` or `[]` instead.
+ */

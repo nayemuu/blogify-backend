@@ -10,6 +10,7 @@ import {
 } from "../services/blogService.js";
 import mongoose from "mongoose";
 import { Blog } from "../models/blogModel.js";
+import { getUserIdFromToken } from "../utils/tokenUtils.js";
 
 /**
  * 🔹 Best Practice: Layered Validation in Node.js + Mongoose
@@ -157,8 +158,19 @@ export const getPublishedBlogs = catchAsync(async (req, res, next) => {
 export const getPublishedBlogById = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-  const blog = await getPublishedBlogByIdService(id);
+  // Step 1 - Extract and decode token if present
+  let currentUserId = null;
+  const bearerToken = req.headers["authorization"];
 
+  if (bearerToken?.startsWith("Bearer ")) {
+    const token = bearerToken.split(" ")[1];
+    currentUserId = getUserIdFromToken(token);
+  }
+
+  // Step 2 - Fetch the blog with optional personalization
+  const blog = await getPublishedBlogByIdService(id, currentUserId);
+
+  // Step 3 - Send response
   res.status(200).json({
     status: "success",
     data: blog,
