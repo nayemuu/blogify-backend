@@ -5,6 +5,7 @@ import {
   deleteBlog,
   getPublishedBlogById,
   getPublishedBlogs,
+  searchFormPublishedBlogs,
   //   getAllBlogs,
   //   getBlogById,
   updateBlog,
@@ -24,6 +25,7 @@ route.post(
   createBlog
 );
 route.get("/", trimRequest.all, getPublishedBlogs);
+route.get("/search/", trimRequest.all, searchFormPublishedBlogs);
 route.get("/:id", trimRequest.all, getPublishedBlogById);
 route.post(
   "/:id",
