@@ -1,6 +1,10 @@
+import validator from "validator";
+import mongoose from "mongoose";
 import { Blog } from "../models/blogModel.js";
 import { AppError } from "../utils/appError.js";
+import { deleteImage, uploadImage } from "../utils/imageUploadUtils.js";
 import { sanitizeArray, sanitizeObject } from "../utils/mongoDB-utils.js";
+import { removeLocalFile } from "../utils/fsUtils.js";
 
 /**
  * Create a new blog
@@ -119,3 +123,72 @@ export const getPublishedBlogByIdService = async (id, currentUserId = null) => {
  *   That’s why you won’t see `likedBy` in the API response.
  * - If you want the property to appear as empty, use `null` or `[]` instead.
  */
+
+// services/blogService.js
+
+export const updateBlogService = async (
+  id,
+  { title, content, tags, thumbnail, file, userId, isSuper }
+) => {
+  const blog = await Blog.findById(id);
+  if (!blog) throw new AppError("Blog not found", 404);
+
+  // Authorization
+  if (blog.author.toString() !== userId.toString()) {
+    throw new AppError("You are not authorized to update this blog", 403);
+  }
+
+  let uploadedImageUrl;
+  let newThumbnail = blog.thumbnail;
+
+  try {
+    // ✅ Validate title
+    if (title && !validator.isLength(title, { min: 5, max: 150 })) {
+      throw new AppError("title must be between 5 and 150 characters", 400);
+    }
+
+    // ✅ Validate content
+    if (content !== undefined && content.trim().length === 0) {
+      throw new AppError("content is required", 400);
+    }
+
+    // ✅ Handle tags
+    let parsedTags = blog.tags;
+    if (tags) {
+      const parsed = JSON.parse(tags);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new AppError("tags are required", 400);
+      }
+      parsedTags = parsed.map((id) => new mongoose.Types.ObjectId(id));
+    }
+
+    // ✅ Handle thumbnail
+    if (file?.path) {
+      const image = await uploadImage(file.path);
+      uploadedImageUrl = image.secure_url;
+      newThumbnail = uploadedImageUrl;
+    } else if (thumbnail) {
+      if (!validator.isURL(thumbnail))
+        throw new AppError("thumbnail must be a valid URL", 400);
+      newThumbnail = thumbnail;
+    }
+
+    // ✅ If new thumbnail → delete old
+    if (newThumbnail !== blog.thumbnail) {
+      await deleteImage(blog.thumbnail);
+    }
+
+    // ✅ Save
+    blog.title = title ?? blog.title;
+    blog.content = content ?? blog.content;
+    blog.tags = parsedTags;
+    blog.thumbnail = newThumbnail;
+
+    return sanitizeObject(await blog.save());
+  } catch (err) {
+    if (uploadedImageUrl) await deleteImage(uploadedImageUrl);
+    throw err;
+  } finally {
+    if (file?.path) removeLocalFile(file.path);
+  }
+};

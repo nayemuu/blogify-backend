@@ -6,7 +6,7 @@ import {
   getPublishedBlogs,
   //   getAllBlogs,
   //   getBlogById,
-  //   updateBlog,
+  updateBlog,
 } from "../controllers/blogController.js";
 import { upload } from "../utils/multer.js";
 import { checkPermission } from "../middlewares/checkPermission.js";
@@ -24,7 +24,13 @@ route.post(
 );
 route.get("/", trimRequest.all, getPublishedBlogs);
 route.get("/:id", trimRequest.all, getPublishedBlogById);
-// route.post("/:id", trimRequest.all, updateBlog);
+route.post(
+  "/:id",
+  trimRequest.all,
+  checkAuth,
+  upload.single("thumbnail"),
+  updateBlog
+);
 // route.delete("/:id", trimRequest.all, deleteBlog);
 
 export default route;

@@ -7,6 +7,7 @@ import {
   createBlogService,
   getPublishedBlogByIdService,
   getPublishedBlogsService,
+  updateBlogService,
 } from "../services/blogService.js";
 import mongoose from "mongoose";
 import { Blog } from "../models/blogModel.js";
@@ -192,6 +193,23 @@ export const getPublishedBlogById = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: blog,
+  });
+});
+
+export const updateBlog = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { user, file, body } = req;
+
+  const updatedBlog = await updateBlogService(id, {
+    ...body,
+    file,
+    userId: user.id,
+    isSuper: user?.isSuper ? true : false,
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: updatedBlog,
   });
 });
 
