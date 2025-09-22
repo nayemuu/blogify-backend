@@ -5,6 +5,7 @@ import { deleteImage, uploadImage } from "../utils/imageUploadUtils.js";
 import { removeLocalFile } from "../utils/fsUtils.js";
 import {
   createBlogService,
+  deleteBlogService,
   getPublishedBlogByIdService,
   getPublishedBlogsService,
   updateBlogService,
@@ -210,6 +211,21 @@ export const updateBlog = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: updatedBlog,
+  });
+});
+
+export const deleteBlog = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { user } = req;
+
+  await deleteBlogService(id, {
+    userId: user.id,
+    isSuper: user?.isSuper ? true : false,
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "Blog deleted successfully",
   });
 });
 

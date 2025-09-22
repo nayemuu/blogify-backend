@@ -2,6 +2,7 @@ import express from "express";
 import trimRequest from "trim-request";
 import {
   createBlog,
+  deleteBlog,
   getPublishedBlogById,
   getPublishedBlogs,
   //   getAllBlogs,
@@ -31,6 +32,6 @@ route.post(
   upload.single("thumbnail"),
   updateBlog
 );
-// route.delete("/:id", trimRequest.all, deleteBlog);
+route.delete("/:id", trimRequest.all, checkAuth, deleteBlog);
 
 export default route;

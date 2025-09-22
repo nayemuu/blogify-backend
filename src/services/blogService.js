@@ -124,8 +124,6 @@ export const getPublishedBlogByIdService = async (id, currentUserId = null) => {
  * - If you want the property to appear as empty, use `null` or `[]` instead.
  */
 
-// services/blogService.js
-
 export const updateBlogService = async (
   id,
   { title, content, tags, thumbnail, file, userId, isSuper }
@@ -191,4 +189,36 @@ export const updateBlogService = async (
   } finally {
     if (file?.path) removeLocalFile(file.path);
   }
+};
+
+/**
+ * Delete a blog
+ * - Only author or super user can delete
+ * - Remove blog from DB
+ * - Delete thumbnail from storage
+ */
+export const deleteBlogService = async (id, { userId, isSuper }) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new AppError("Invalid blog ID", 400);
+  }
+
+  const blog = await Blog.findById(id);
+  if (!blog) {
+    throw new AppError("Blog not found", 404);
+  }
+
+  // ✅ Authorization check
+  if (blog.author.toString() !== userId.toString()) {
+    throw new AppError("You are not authorized to delete this blog", 403);
+  }
+
+  // ✅ Delete blog
+  await Blog.deleteOne({ _id: id });
+
+  // ✅ Delete image
+  if (blog.thumbnail) {
+    await deleteImage(blog.thumbnail);
+  }
+
+  return true;
 };
