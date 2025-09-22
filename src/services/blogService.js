@@ -95,25 +95,31 @@ export const searchPublishedBlogsService = async ({
   offset = 0,
   query = "",
 } = {}) => {
-  // sanitize / normalize pagination inputs
+  // sanitize inputs
   limit = Number(limit) || 10;
   offset = Number(offset) || 0;
   query = (query || "").trim();
 
-  // Base pipeline (match published + joins)
+  // ✅ If query is empty → return no results
+  if (!query) {
+    return { count: 0, blogs: [] };
+  }
+
+  const regex = new RegExp(query, "i"); // case-insensitive
+
+  // Base pipeline
   const pipelineBase = [
     { $match: { status: "published" } },
 
     // join author
     {
       $lookup: {
-        from: "users", // collection name
+        from: "users",
         localField: "author",
         foreignField: "_id",
         as: "author",
       },
     },
-    // unwind author to object (preserve in case author missing)
     { $unwind: { path: "$author", preserveNullAndEmptyArrays: true } },
 
     // join tags
@@ -127,51 +133,38 @@ export const searchPublishedBlogsService = async ({
     },
   ];
 
-  // If query is provided, add a $match that checks title, author.name, tags.title, content
-  const regex = query ? new RegExp(query, "i") : null;
-  const queryMatchStage = query
-    ? {
-        $match: {
-          $or: [
-            { title: regex }, // 1. title
-            { "author.name": regex }, // 2. author name (joined)
-            { "tags.title": regex }, // 3. tag title (joined array)
-            { content: regex }, // 4. content
-          ],
-        },
-      }
-    : null;
+  // query match
+  const queryMatchStage = {
+    $match: {
+      $or: [
+        { title: regex }, // 1. title
+        { "author.name": regex }, // 2. author name
+        { "tags.title": regex }, // 3. tag title
+        { content: regex }, // 4. content
+      ],
+    },
+  };
 
-  // Build count pipeline (base + optional query match + $count)
-  const countPipeline = [
-    ...pipelineBase,
-    ...(queryMatchStage ? [queryMatchStage] : []),
-    { $count: "total" },
-  ];
+  // Count pipeline
+  const countPipeline = [...pipelineBase, queryMatchStage, { $count: "total" }];
+  const countResult = await Blog.aggregate(countPipeline);
+  const count = countResult[0]?.total || 0;
 
-  // Build fetch pipeline (base + optional query match + sort + paginate)
+  // Fetch pipeline
   const fetchPipeline = [
     ...pipelineBase,
-    ...(queryMatchStage ? [queryMatchStage] : []),
+    queryMatchStage,
     { $sort: { createdAt: -1 } },
     { $skip: offset },
     { $limit: limit },
   ];
 
-  // Run count aggregation
-  const countResult = await Blog.aggregate(countPipeline);
-  const count = (countResult[0] && countResult[0].total) || 0;
-
-  // Run fetch aggregation
   let blogs = await Blog.aggregate(fetchPipeline);
 
-  // At this point `blogs` are plain objects from aggregation.
-  // Sanitize and transform each blog (sanitize root blog, author, tags; compute likesCount & isLiked)
+  // sanitize & transform
   blogs = sanitizeArray(blogs).map((blog) => {
-    // likedBy might be array of ObjectId or strings depending on storage
     const { likedBy = [], author: authorRaw, tags: tagsRaw, ...rest } = blog;
 
-    // sanitize author & tags
     const author = authorRaw ? sanitizeObject(authorRaw) : null;
     const tags =
       Array.isArray(tagsRaw) && tagsRaw.length ? sanitizeArray(tagsRaw) : [];
@@ -182,13 +175,7 @@ export const searchPublishedBlogsService = async ({
         ? likedBy.some((id) => id.toString() === currentUserId.toString())
         : false;
 
-    return {
-      ...rest,
-      author,
-      tags,
-      likesCount,
-      isLiked,
-    };
+    return { ...rest, author, tags, likesCount, isLiked };
   });
 
   return { count, blogs };
