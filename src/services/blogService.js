@@ -19,13 +19,30 @@ export const createBlogService = async (data) => {
 
 /**
  * Get published blogs with pagination
+ *
+ * @param {string|null} currentUserId - Current logged-in user ID (null if not logged in)
  * @param {number} limit - Number of blogs per page
  * @param {number} offset - Number of blogs to skip
  * @returns {Promise<{count: number, blogs: Array}>}
+ *
+ * Each blog object includes:
+ * - author (sanitized author object)
+ * - tags (sanitized tags array)
+ * - likesCount (number of likes)
+ * - isLiked (true if current user liked, false otherwise)
+ *
+ * Note:
+ * - `likedBy` is not included in the response.
  */
-export const getPublishedBlogsService = async (limit = 10, offset = 0) => {
+export const getPublishedBlogsService = async (
+  currentUserId = null,
+  limit = 10,
+  offset = 0
+) => {
+  // Count total published blogs
   const count = await Blog.countDocuments({ status: "published" });
 
+  // Fetch paginated published blogs
   let blogs = await Blog.find({ status: "published" })
     .skip(offset)
     .limit(limit)
@@ -33,17 +50,22 @@ export const getPublishedBlogsService = async (limit = 10, offset = 0) => {
     .populate("tags", "title")
     .sort({ createdAt: -1 });
 
-  // sanitize blogs and remove likedBy array
+  // Sanitize blogs and transform output
   blogs = sanitizeArray(blogs).map((blog) => {
-    const { likedBy, ...rest } = blog; // remove likedBy
+    const { likedBy, ...rest } = blog;
     const author = blog.author ? sanitizeObject(blog.author) : null;
     const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
 
     return {
       ...rest,
-      author: author,
-      tags: tags,
-      likesCount: likedBy?.length || 0, // only send number of likes
+      author,
+      tags,
+      likesCount: likedBy?.length || 0,
+      isLiked: currentUserId
+        ? likedBy?.some(
+            (userId) => userId.toString() === currentUserId.toString()
+          )
+        : false,
     };
   });
 

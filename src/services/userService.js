@@ -104,7 +104,9 @@ export const toggleLikeBlogService = async (blogId, userId) => {
   await blog.save();
 
   // Convert to plain object
-  const { likedBy, ...rest } = blog.toObject({ virtuals: true });
+  const { likedBy, ...rest } = sanitizeObject(
+    blog.toObject({ virtuals: true })
+  );
 
   const author = blog.author ? sanitizeObject(blog.author) : null;
   const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];

@@ -140,7 +140,20 @@ export const getPublishedBlogs = catchAsync(async (req, res, next) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = parseInt(req.query.offset) || 0;
 
-  const { count, blogs } = await getPublishedBlogsService(limit, offset);
+  // Step 1 - Extract and decode token if present
+  let currentUserId = null;
+  const bearerToken = req.headers["authorization"];
+
+  if (bearerToken?.startsWith("Bearer ")) {
+    const token = bearerToken.split(" ")[1];
+    currentUserId = getUserIdFromToken(token);
+  }
+
+  const { count, blogs } = await getPublishedBlogsService(
+    currentUserId,
+    limit,
+    offset
+  );
 
   res.status(200).json({
     status: "success",
