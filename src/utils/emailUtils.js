@@ -20,6 +20,15 @@ export const sendEmail = async ({ to, subject, text, html }) => {
       },
     });
 
+    console.log(
+      "process.env.NODEMAILER_GMAIL_USER = ",
+      process.env.NODEMAILER_GMAIL_USER
+    );
+    console.log(
+      "process.env.NODEMAILER_GMAIL_PASS, = ",
+      process.env.NODEMAILER_GMAIL_PASS
+    );
+
     // 2. Mail options
     const mailOptions = {
       from: `Blogify`,
@@ -31,6 +40,7 @@ export const sendEmail = async ({ to, subject, text, html }) => {
 
     // 3. Send mail
     const info = await transporter.sendMail(mailOptions);
+    console.log("sent");
     return info;
   } catch (error) {
     console.error("Email sending failed:", error);
