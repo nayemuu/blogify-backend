@@ -5,6 +5,7 @@ import { AppError } from "../utils/appError.js";
 import { deleteImage, uploadImage } from "../utils/imageUploadUtils.js";
 import { sanitizeArray, sanitizeObject } from "../utils/mongoDB-utils.js";
 import { removeLocalFile } from "../utils/fsUtils.js";
+import { Bookmark } from "../models/bookmarkModel.js";
 
 /**
  * Create a new blog
@@ -28,25 +29,16 @@ export const createBlogService = async (data) => {
  * @param {number} limit - Number of blogs per page
  * @param {number} offset - Number of blogs to skip
  * @returns {Promise<{count: number, blogs: Array}>}
- *
- * Each blog object includes:
- * - author (sanitized author object)
- * - tags (sanitized tags array)
- * - likesCount (number of likes)
- * - isLiked (true if current user liked, false otherwise)
- *
- * Note:
- * - `likedBy` is not included in the response.
  */
 export const getPublishedBlogsService = async (
   currentUserId = null,
   limit = 10,
   offset = 0
 ) => {
-  // Count total published blogs
+  // ✅ Count total published blogs
   const count = await Blog.countDocuments({ status: "published" });
 
-  // Fetch paginated published blogs
+  // ✅ Fetch paginated published blogs
   let blogs = await Blog.find({ status: "published" })
     .skip(offset)
     .limit(limit)
@@ -54,7 +46,18 @@ export const getPublishedBlogsService = async (
     .populate("tags", "title")
     .sort({ createdAt: -1 });
 
-  // Sanitize blogs and transform output
+  // ✅ If user is logged in, fetch their bookmarks once
+  let bookmarkedIds = new Set();
+  if (currentUserId) {
+    const bookmarkDoc = await Bookmark.findOne({ user: currentUserId }).select(
+      "blogs"
+    );
+    if (bookmarkDoc) {
+      bookmarkedIds = new Set(bookmarkDoc.blogs.map((id) => id.toString()));
+    }
+  }
+
+  // ✅ Sanitize blogs and transform output
   blogs = sanitizeArray(blogs).map((blog) => {
     const { likedBy, ...rest } = blog;
     const author = blog.author ? sanitizeObject(blog.author) : null;
@@ -70,13 +73,13 @@ export const getPublishedBlogsService = async (
             (userId) => userId.toString() === currentUserId.toString()
           )
         : false,
+      isBookmarked: currentUserId
+        ? bookmarkedIds.has(blog?.id?.toString())
+        : false,
     };
   });
 
-  return {
-    count,
-    blogs,
-  };
+  return { count, blogs };
 };
 
 /**
