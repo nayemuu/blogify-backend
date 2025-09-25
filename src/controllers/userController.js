@@ -2,6 +2,7 @@ import {
   getUserProfile,
   getUserBlogs,
   toggleLikeBlogService,
+  toggleBookmarkService,
 } from "../services/userService.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
@@ -34,7 +35,7 @@ export const getMyBlogs = catchAsync(async (req, res, next) => {
 });
 
 export const toggleLikeBlogController = catchAsync(async (req, res, next) => {
-  const userId = req.user?.id;
+  const userId = req?.user?.id;
   if (!userId) {
     throw new AppError("You must be logged in first", 401);
   }
@@ -45,5 +46,28 @@ export const toggleLikeBlogController = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: updatedBlog,
+  });
+});
+
+/**
+ * Controller for toggling a blog bookmark
+ * POST /api/bookmarks/toggle/:blogId
+ */
+export const toggleBookmarkController = catchAsync(async (req, res, next) => {
+  const userId = req?.user?.id;
+  if (!userId) {
+    throw new AppError("You must be logged in first", 401);
+  }
+
+  const blogId = req.params.id;
+
+  const result = await toggleBookmarkService(userId, blogId);
+
+  res.status(200).json({
+    status: "success",
+    message: result.isBookmarked
+      ? "Blog added to your bookmark list"
+      : "Blog removed from your bookmark list",
+    data: result, // { blogId, isBookmarked }
   });
 });

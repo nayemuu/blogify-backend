@@ -3,6 +3,7 @@ import User from "../models/userModel.js";
 import { AppError } from "../utils/appError.js";
 import { Blog } from "../models/blogModel.js";
 import { sanitizeArray, sanitizeObject } from "../utils/mongoDB-utils.js";
+import { Bookmark } from "../models/bookmarkModel.js";
 
 export const getUserProfile = async (id) => {
   // Check if id is a valid ObjectId before querying
@@ -117,5 +118,70 @@ export const toggleLikeBlogService = async (blogId, userId) => {
     tags,
     likesCount: likedBy?.length || 0,
     isLiked: !alreadyLiked, // reflect latest action
+  };
+};
+
+/**
+ * Toggle a blog in user's bookmarks
+ * @param {string} userId
+ * @param {string} blogId
+ * @returns {Promise<Object>} Sanitized bookmark document
+ */
+export const toggleBookmarkService = async (userId, blogId) => {
+  // ✅ Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new AppError("Invalid user ID", 400);
+  }
+  if (!mongoose.Types.ObjectId.isValid(blogId)) {
+    throw new AppError("Invalid blog ID", 400);
+  }
+
+  // ✅ Ensure user exists
+  const userExists = await User.exists({ _id: userId });
+  if (!userExists) {
+    throw new AppError("User not found", 404);
+  }
+
+  // ✅ Ensure blog exists (must be published to bookmark)
+  const blogExists = await Blog.exists({ _id: blogId, status: "published" });
+  if (!blogExists) {
+    throw new AppError("Blog not found or not published", 404);
+  }
+
+  // ✅ Find user's bookmark document (if any)
+  let bookmarkDoc = await Bookmark.findOne({ user: userId });
+
+  // will hold final bookmark state after toggling
+  let isBookmarked = false;
+
+  if (!bookmarkDoc) {
+    // ✅ No bookmark doc exists for user → create one with this blog
+    // (unique index on user prevents duplicates; handle duplicate-key at call-site if necessary)
+    bookmarkDoc = await Bookmark.create({ user: userId, blogs: [blogId] });
+    isBookmarked = true;
+  } else {
+    // ✅ Bookmark doc exists → check if blogId is present
+    const index = bookmarkDoc.blogs.findIndex(
+      (id) => id.toString() === blogId.toString()
+    );
+
+    if (index > -1) {
+      // ✅ Already bookmarked → remove it
+      bookmarkDoc.blogs.splice(index, 1);
+      isBookmarked = false;
+    } else {
+      // ✅ Not bookmarked → add it
+      bookmarkDoc.blogs.push(blogId);
+      isBookmarked = true;
+    }
+
+    // ✅ Persist changes
+    await bookmarkDoc.save();
+  }
+
+  // ✅ Return sanitized primitives (ObjectId -> string + boolean)
+  return {
+    blogId: blogId.toString(),
+    isBookmarked,
   };
 };
