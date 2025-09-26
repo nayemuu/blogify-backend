@@ -6,17 +6,29 @@ import { sanitizeArray, sanitizeObject } from "../utils/mongoDB-utils.js";
 import { Bookmark } from "../models/bookmarkModel.js";
 
 export const getUserProfile = async (id) => {
-  // Check if id is a valid ObjectId before querying
+  // ✅ Check if id is a valid ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new AppError("Invalid user ID", 400);
   }
 
+  // ✅ Fetch user basic info
   const user = await User.findById(id).select("name email picture");
   if (!user) {
     throw new AppError("User not found with the provided ID", 404);
   }
 
-  return sanitizeObject(user.toObject());
+  // ✅ Count blogs
+  const [totalBlogs, publishedBlogs] = await Promise.all([
+    Blog.countDocuments({ author: id }),
+    Blog.countDocuments({ author: id, status: "published" }),
+  ]);
+
+  // ✅ Return profile with stats
+  return {
+    ...sanitizeObject(user.toObject()),
+    totalBlogs,
+    publishedBlogs,
+  };
 };
 
 /**
