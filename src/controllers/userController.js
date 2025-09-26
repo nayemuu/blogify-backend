@@ -3,6 +3,7 @@ import {
   getUserBlogs,
   toggleLikeBlogService,
   toggleBookmarkService,
+  getBookmarkedBlogsService,
 } from "../services/userService.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
@@ -69,5 +70,34 @@ export const toggleBookmarkController = catchAsync(async (req, res, next) => {
       ? "Blog added to your bookmark list"
       : "Blog removed from your bookmark list",
     data: result, // { blogId, isBookmarked }
+  });
+});
+
+/**
+ * Get bookmarked blogs for logged-in user
+ */
+export const getBookmarkedBlogs = catchAsync(async (req, res, next) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const offset = parseInt(req.query.offset) || 0;
+
+  // ✅ Require login
+  const userId = req?.user?.id;
+  if (!userId) {
+    throw new AppError("You must be logged in first to view bookmarks", 401);
+  }
+
+  const { count, blogs } = await getBookmarkedBlogsService(
+    userId,
+    limit,
+    offset
+  );
+
+  res.status(200).json({
+    status: "success",
+    count, // total bookmarked blogs
+    limit,
+    offset,
+    results: blogs.length,
+    blogs,
   });
 });

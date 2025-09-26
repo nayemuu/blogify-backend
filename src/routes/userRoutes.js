@@ -5,6 +5,7 @@ import {
   getMyBlogs,
   toggleLikeBlogController,
   toggleBookmarkController,
+  getBookmarkedBlogs,
 } from "../controllers/userController.js";
 import { checkAuth } from "../middlewares/checkAuth.js";
 
@@ -25,4 +26,7 @@ route.post(
   trimRequest.all,
   toggleBookmarkController
 );
+
+route.get("/blogs/bookmarks", checkAuth, trimRequest.all, getBookmarkedBlogs);
+
 export default route;

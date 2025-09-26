@@ -185,3 +185,55 @@ export const toggleBookmarkService = async (userId, blogId) => {
     isBookmarked,
   };
 };
+
+/**
+ * Service: Get bookmarked blogs for a user
+ */
+export const getBookmarkedBlogsService = async (
+  currentUserId,
+  limit = 10,
+  offset = 0
+) => {
+  // ✅ Fetch user’s bookmark document
+  const bookmarkDoc = await Bookmark.findOne({ user: currentUserId }).select(
+    "blogs"
+  );
+
+  if (!bookmarkDoc || !bookmarkDoc.blogs.length) {
+    return { count: 0, blogs: [] };
+  }
+
+  // ✅ Count total bookmarked blogs
+  const count = bookmarkDoc.blogs.length;
+
+  // ✅ Get paginated bookmarked blogs
+  let blogs = await Blog.find({
+    _id: { $in: bookmarkDoc.blogs },
+    status: "published", // show only published ones
+  })
+    .skip(offset)
+    .limit(limit)
+    .populate("author", "name")
+    .populate("tags", "title")
+    .sort({ createdAt: -1 });
+
+  // ✅ Transform output
+  blogs = sanitizeArray(blogs).map((blog) => {
+    const { likedBy, ...rest } = blog;
+    const author = blog.author ? sanitizeObject(blog.author) : null;
+    const tags = blog?.tags?.length ? sanitizeArray(blog.tags) : [];
+
+    return {
+      ...rest,
+      author,
+      tags,
+      likesCount: likedBy?.length || 0,
+      isLiked: likedBy?.some(
+        (userId) => userId.toString() === currentUserId.toString()
+      ),
+      isBookmarked: true, // since this is bookmarks list
+    };
+  });
+
+  return { count, blogs };
+};
