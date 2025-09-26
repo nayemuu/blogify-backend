@@ -12,8 +12,20 @@ import { AppError } from "./appError.js";
 export const sendEmail = async ({ to, subject, text, html }) => {
   try {
     // 1. Create a transporter
-    const transporter = nodemailer.createTransport({
+    // Render is blocking outbound SMTP traffic on port 465/587 for Gmail and other common mail providers.
+    const transporter2 = nodemailer.createTransport({
       service: "gmail", // Using Gmail
+      auth: {
+        user: process.env.NODEMAILER_GMAIL_USER, // Your Gmail
+        pass: process.env.NODEMAILER_GMAIL_PASS, // App password (not your Gmail password!)
+      },
+    });
+
+    const transporter = nodemailer.createTransport({
+      pool: true,
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // use TLS
       auth: {
         user: process.env.NODEMAILER_GMAIL_USER, // Your Gmail
         pass: process.env.NODEMAILER_GMAIL_PASS, // App password (not your Gmail password!)
