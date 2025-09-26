@@ -1,8 +1,11 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { AppError } from "./appError.js";
 
+// Initialize Resend client
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 /**
- * Send email using Gmail & Nodemailer
+ * Send email using Resend
  * @param {Object} options
  * @param {string} options.to - Recipient email
  * @param {string} options.subject - Email subject
@@ -11,42 +14,22 @@ import { AppError } from "./appError.js";
  */
 export const sendEmail = async ({ to, subject, text, html }) => {
   try {
-    // 1. Create a transporter
-    // Render is blocking outbound SMTP traffic on port 465/587 for Gmail and other common mail providers.
-    const transporter = nodemailer.createTransport({
-      service: "gmail", // Using Gmail
-      auth: {
-        user: process.env.NODEMAILER_GMAIL_USER, // Your Gmail
-        pass: process.env.NODEMAILER_GMAIL_PASS, // App password (not your Gmail password!)
-      },
-    });
-
-    // const transporter = nodemailer.createTransport({
-    //   pool: true,
-    //   host: "smtp.gmail.com",
-    //   port: 465,
-    //   secure: true, // use TLS
-    //   auth: {
-    //     user: process.env.NODEMAILER_GMAIL_USER, // Your Gmail
-    //     pass: process.env.NODEMAILER_GMAIL_PASS, // App password (not your Gmail password!)
-    //   },
-    // });
-
-    // 2. Mail options
-    const mailOptions = {
-      from: `Blogify`,
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_GMAIL_USER, // Replace with your verified domain/sender
       to,
       subject,
       text,
       html,
-    };
+    });
 
-    // 3. Send mail
-    const info = await transporter.sendMail(mailOptions);
-    console.log("sent");
-    return info;
-  } catch (error) {
-    console.error("Email sending failed:", error);
+    if (error) {
+      console.error("Email sending failed:", error);
+      throw new AppError("Failed to send email", 500);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Email sending failed:", err);
     throw new AppError("Failed to send email", 500);
   }
 };
