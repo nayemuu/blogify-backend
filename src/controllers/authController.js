@@ -13,6 +13,8 @@ import { catchAsync } from "../utils/catchAsync.js";
 import { generateToken } from "../utils/tokenUtils.js";
 
 export const register = catchAsync(async (req, res, next) => {
+  let OtpVerification = false;
+
   const { name, email, picture, password } = req.body;
 
   const { user, otpCode } = await createUser({
@@ -24,8 +26,9 @@ export const register = catchAsync(async (req, res, next) => {
 
   res.status(201).json({
     status: "success",
-    message:
-      "User successfully registered. An OTP has been sent to your email. Please verify within 5 minutes.",
+    message: OtpVerification
+      ? "User successfully registered. An OTP has been sent to your email. Please verify within 5 minutes."
+      : "User successfully registered",
     data: {
       id: user._id,
       email: user.email,

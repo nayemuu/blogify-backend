@@ -10,6 +10,8 @@ import { sentOTP } from "./sendOtpService.js";
 import { sendEmail } from "../utils/emailUtils.js";
 
 export const createUser = async ({ name, email, picture, password }) => {
+  let OtpVerification = false;
+
   // 1. Validate required fields
   if (!name || !email || !password) {
     throw new AppError("Please fill all required fields.", 400);
@@ -68,8 +70,12 @@ export const createUser = async ({ name, email, picture, password }) => {
     email,
     picture,
     password,
-    status: "pending",
+    status: OtpVerification ? "pending" : "active",
   });
+
+  if (!OtpVerification) {
+    return { user: newUser };
+  }
 
   // 7. Send OTP for email verification
   const otpCode = await sentOTP({
